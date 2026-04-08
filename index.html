@@ -1,0 +1,623 @@
+import React, { useState, useMemo } from 'react';
+import { Trash2, Plus, Trophy, Target, Users, AlertCircle, Briefcase, UserPlus, Edit2, X, Share2, Download, MessageCircle, LayoutDashboard, FileText, Calendar } from 'lucide-react';
+
+// Para formatı için yardımcı fonksiyon
+const formatTL = (amount) => {
+  return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(amount) + ' ₺';
+};
+
+// Tarih formatı için yardımcı fonksiyon
+const formatDate = (dateString) => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
+export default function App() {
+  // Tab State
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'reports'
+
+  // Hedefler ve Milat Tarihi
+  const [targetOld, setTargetOld] = useState(1200000);
+  const [targetNew, setTargetNew] = useState(800000);
+  const [cutoffDate, setCutoffDate] = useState('2026-01-01'); // Bu tarihten sonrası "Yeni" sayılır
+
+  // Örnek (Anonim) Veriler
+  const [employees, setEmployees] = useState([
+    { id: 1, office: 'MERKEZ OFİS', name: 'ESKİ PERSONEL 1', entryDate: '2024-05-15', jan: 900000, feb: 350000, mar: 0, returns: 0 },
+    { id: 2, office: 'ŞUBE OFİS', name: 'ESKİ PERSONEL 2', entryDate: '2025-11-20', jan: 600000, feb: 400000, mar: 100000, returns: 50000 },
+    { id: 3, office: 'MERKEZ OFİS', name: 'YENİ PERSONEL 1', entryDate: '2026-02-01', jan: 500000, feb: 300000, mar: 0, returns: 0 },
+    { id: 4, office: 'ŞUBE OFİS', name: 'YENİ PERSONEL 2', entryDate: '2026-03-10', jan: 400000, feb: 200000, mar: 50000, returns: 10000 },
+  ]);
+
+  // Yeni Personel Formu State'leri
+  const [formData, setFormData] = useState({
+    name: '', office: '', entryDate: '', jan: '', feb: '', mar: '', returns: ''
+  });
+  const [editingId, setEditingId] = useState(null);
+
+  // Personelin yeni olup olmadığını kontrol eden fonksiyon
+  const isNewEmployee = (dateStr) => {
+    if (!dateStr || !cutoffDate) return false;
+    return new Date(dateStr) >= new Date(cutoffDate);
+  };
+
+  // Eski Personel Verilerini Hesapla ve Sırala
+  const processedOldData = useMemo(() => {
+    return employees
+      .filter(emp => !isNewEmployee(emp.entryDate))
+      .map(emp => {
+        const netRevenue = (Number(emp.jan) || 0) + (Number(emp.feb) || 0) + (Number(emp.mar) || 0) - (Number(emp.returns) || 0);
+        const remaining = targetOld - netRevenue;
+        let percentage = (netRevenue / targetOld) * 100;
+        if (percentage < 0) percentage = 0;
+
+        return {
+          ...emp,
+          target: targetOld,
+          netRevenue,
+          remaining: remaining > 0 ? remaining : 0,
+          percentage,
+          isWinner: netRevenue >= targetOld
+        };
+      }).sort((a, b) => b.percentage - a.percentage);
+  }, [employees, targetOld, cutoffDate]);
+
+  // Yeni Personel Verilerini Hesapla ve Sırala
+  const processedNewData = useMemo(() => {
+    return employees
+      .filter(emp => isNewEmployee(emp.entryDate))
+      .map(emp => {
+        const netRevenue = (Number(emp.jan) || 0) + (Number(emp.feb) || 0) + (Number(emp.mar) || 0) - (Number(emp.returns) || 0);
+        const remaining = targetNew - netRevenue;
+        let percentage = (netRevenue / targetNew) * 100;
+        if (percentage < 0) percentage = 0;
+
+        return {
+          ...emp,
+          target: targetNew,
+          netRevenue,
+          remaining: remaining > 0 ? remaining : 0,
+          percentage,
+          isWinner: netRevenue >= targetNew
+        };
+      }).sort((a, b) => b.percentage - a.percentage);
+  }, [employees, targetNew, cutoffDate]);
+
+  // Form input değişikliklerini yönet
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Düzenleme modunu aç
+  const handleEdit = (employee) => {
+    setFormData({
+      name: employee.name,
+      office: employee.office,
+      entryDate: employee.entryDate || '',
+      jan: employee.jan || '',
+      feb: employee.feb || '',
+      mar: employee.mar || '',
+      returns: employee.returns || ''
+    });
+    setEditingId(employee.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Düzenlemeyi iptal et
+  const handleCancelEdit = () => {
+    setFormData({ name: '', office: '', entryDate: '', jan: '', feb: '', mar: '', returns: '' });
+    setEditingId(null);
+  };
+
+  // Form gönderimi
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.office || !formData.entryDate) {
+      alert("Lütfen personel adı, ofis ve işe giriş tarihi bilgilerini eksiksiz giriniz.");
+      return;
+    }
+
+    if (editingId) {
+      setEmployees(prev => prev.map(emp => emp.id === editingId ? {
+        ...emp,
+        office: formData.office.toUpperCase(),
+        name: formData.name.toUpperCase(),
+        entryDate: formData.entryDate,
+        jan: Number(formData.jan) || 0,
+        feb: Number(formData.feb) || 0,
+        mar: Number(formData.mar) || 0,
+        returns: Number(formData.returns) || 0,
+      } : emp));
+      setEditingId(null);
+    } else {
+      const newEmp = {
+        id: Date.now(),
+        office: formData.office.toUpperCase(),
+        name: formData.name.toUpperCase(),
+        entryDate: formData.entryDate,
+        jan: Number(formData.jan) || 0,
+        feb: Number(formData.feb) || 0,
+        mar: Number(formData.mar) || 0,
+        returns: Number(formData.returns) || 0,
+      };
+      setEmployees(prev => [...prev, newEmp]);
+    }
+    setFormData({ name: '', office: '', entryDate: '', jan: '', feb: '', mar: '', returns: '' });
+  };
+
+  // Personel sil
+  const handleDelete = (id) => {
+    if (window.confirm("Bu personeli silmek istediğinize emin misiniz?")) {
+      setEmployees(prev => prev.filter(emp => emp.id !== id));
+    }
+  };
+
+  // Toplam İstatistikler
+  const totalWinners = processedOldData.filter(e => e.isWinner).length + processedNewData.filter(e => e.isWinner).length;
+
+  // WhatsApp Rapor Metni Oluşturucu
+  const generateWhatsAppText = () => {
+    let text = `🏆 *İHLAS PAZARLAMA - ANTALYA TATİLİ RAPORU* 🏆\n\n`;
+    text += `📊 *Genel Özet*\n`;
+    text += `👥 Toplam Personel: ${employees.length}\n`;
+    text += `🎉 Toplam Kazanan: ${totalWinners}\n\n`;
+
+    const oldWinners = processedOldData.filter(e => e.isWinner);
+    if (oldWinners.length > 0) {
+      text += `🌟 *ESKİ PERSONEL KAZANANLAR*\n`;
+      oldWinners.forEach((e, i) => {
+        text += `${i + 1}. ${e.name} (${e.office}) - %${e.percentage.toFixed(0)}\n`;
+      });
+      text += `\n`;
+    }
+
+    const newWinners = processedNewData.filter(e => e.isWinner);
+    if (newWinners.length > 0) {
+      text += `🌟 *YENİ PERSONEL KAZANANLAR*\n`;
+      newWinners.forEach((e, i) => {
+        text += `${i + 1}. ${e.name} (${e.office}) - %${e.percentage.toFixed(0)}\n`;
+      });
+      text += `\n`;
+    }
+    return text;
+  };
+
+  const handleWhatsAppShare = () => {
+    const text = generateWhatsAppText();
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handlePrintPDF = () => {
+    window.print();
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 print:bg-white text-slate-800 font-sans pb-20">
+      
+      {/* Üst Navigasyon - Yazdırmada Gizle */}
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-40 print:hidden">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-yellow-100 p-2 rounded-lg">
+              <Trophy className="text-yellow-600 w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 leading-tight">İhlas Pazarlama</h1>
+              <p className="text-xs text-slate-500">Antalya Tatili Takip Sistemi</p>
+            </div>
+          </div>
+          
+          <div className="flex bg-slate-100 p-1 rounded-lg">
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm transition-all ${activeTab === 'dashboard' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Ana Sayfa
+            </button>
+            <button 
+              onClick={() => setActiveTab('reports')}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm transition-all ${activeTab === 'reports' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              <FileText className="w-4 h-4" />
+              Raporlar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 md:p-8">
+        
+        {/* ANA SAYFA (DASHBOARD) GÖRÜNÜMÜ */}
+        {activeTab === 'dashboard' && (
+          <div className="max-w-7xl mx-auto print:hidden">
+            {/* İstatistikler */}
+            <div className="flex flex-wrap gap-4 mb-6">
+              <div className="bg-white px-5 py-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 min-w-[200px]">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Toplam Personel</p>
+                  <p className="text-2xl font-black text-slate-800">{employees.length}</p>
+                </div>
+              </div>
+              <div className="bg-white px-5 py-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 min-w-[200px]">
+                <div className="p-3 bg-green-50 text-green-600 rounded-lg">
+                  <Trophy className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Toplam Kazanan</p>
+                  <p className="text-2xl font-black text-slate-800">{totalWinners}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* Hedef Ayarları Paneli */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-1">
+                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-blue-500" />
+                  Kampanya Ayarları
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-600 mb-1">Eski Personel Hedefi (TL)</label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        value={targetOld} 
+                        onChange={(e) => setTargetOld(Number(e.target.value))}
+                        className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                      />
+                      <span className="absolute right-3 top-3 text-slate-400 font-bold">₺</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-600 mb-1">Yeni Personel Hedefi (TL)</label>
+                    <div className="relative">
+                      <input 
+                        type="number" 
+                        value={targetNew} 
+                        onChange={(e) => setTargetNew(Number(e.target.value))}
+                        className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                      />
+                      <span className="absolute right-3 top-3 text-slate-400 font-bold">₺</span>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100">
+                    <label className="block text-sm font-semibold text-slate-600 mb-1 flex items-center gap-1">
+                      <Calendar className="w-4 h-4 text-orange-500"/>
+                      Yeni Personel Miladı
+                    </label>
+                    <p className="text-xs text-slate-400 mb-2">Bu tarih ve sonrasında işe girenler otomatik "Yeni" sayılır.</p>
+                    <input 
+                      type="date" 
+                      value={cutoffDate} 
+                      onChange={(e) => setCutoffDate(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Yeni Kayıt Paneli */}
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-2 relative overflow-hidden">
+                {editingId && <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>}
+                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  {editingId ? <Edit2 className="w-5 h-5 text-blue-500" /> : <Plus className="w-5 h-5 text-green-500" />}
+                  {editingId ? 'Personel Bilgilerini Düzenle' : 'Yeni Personel / Veri Girişi'}
+                </h2>
+                <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Ad Soyad</label>
+                    <input required name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Ofis</label>
+                    <input required name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide flex items-center gap-1"><Calendar className="w-3 h-3"/> Giriş Tarihi</label>
+                    <input required type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Ocak Satış</label>
+                    <input name="jan" value={formData.jan} onChange={handleInputChange} type="number" placeholder="0" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Şubat Satış</label>
+                    <input name="feb" value={formData.feb} onChange={handleInputChange} type="number" placeholder="0" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Mart Satış</label>
+                    <input name="mar" value={formData.mar} onChange={handleInputChange} type="number" placeholder="0" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-red-500 mb-1 uppercase tracking-wide">Toplam İade</label>
+                    <input name="returns" value={formData.returns} onChange={handleInputChange} type="number" placeholder="0" className="w-full px-3 py-2 bg-red-50 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-red-700 font-medium" />
+                  </div>
+                  
+                  <div className="md:col-span-4 flex justify-end mt-2 gap-2">
+                    {editingId && (
+                      <button type="button" onClick={handleCancelEdit} className="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2">
+                        <X className="w-4 h-4" />
+                        İptal
+                      </button>
+                    )}
+                    <button type="submit" className={`${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'} text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 shadow-md`}>
+                      {editingId ? <Edit2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                      {editingId ? 'Güncelle' : 'Listeye Ekle'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            {/* Tablolar Alanı */}
+            <div className="space-y-8">
+              <EmployeeTable 
+                title="Eski Personeller Tablosu" 
+                icon={<Briefcase className="w-5 h-5 text-purple-600" />}
+                data={processedOldData}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                badgeClass="bg-purple-100 text-purple-800 border-purple-200"
+                typeLabel="Eski"
+              />
+
+              <EmployeeTable 
+                title="Yeni Personeller Tablosu" 
+                icon={<UserPlus className="w-5 h-5 text-orange-600" />}
+                data={processedNewData}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                badgeClass="bg-orange-100 text-orange-800 border-orange-200"
+                typeLabel="Yeni"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* RAPORLAR GÖRÜNÜMÜ */}
+        {activeTab === 'reports' && (
+          <div className="max-w-4xl mx-auto">
+            {/* Rapor Aksiyon Butonları (Yazdırmada Gizle) */}
+            <div className="flex flex-wrap justify-end gap-3 mb-6 print:hidden">
+              <button 
+                onClick={handleWhatsAppShare}
+                className="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center gap-2"
+              >
+                <MessageCircle className="w-5 h-5" />
+                WhatsApp'ta Paylaş
+              </button>
+              <button 
+                onClick={handlePrintPDF}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center gap-2"
+              >
+                <Download className="w-5 h-5" />
+                PDF Olarak İndir / Yazdır
+              </button>
+            </div>
+
+            {/* A4 Formatında Rapor Önizleme Container'ı */}
+            <div className="bg-white p-8 md:p-12 rounded-xl shadow-lg border border-slate-200 print:shadow-none print:border-none print:p-0">
+              
+              {/* Rapor Başlığı */}
+              <div className="text-center mb-10 pb-6 border-b-2 border-slate-100">
+                <div className="flex justify-center mb-4">
+                  <Trophy className="w-16 h-16 text-yellow-500 drop-shadow-md" />
+                </div>
+                <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight mb-2">
+                  İhlas Pazarlama - Antalya Tatili
+                </h1>
+                <h2 className="text-xl font-bold text-slate-600">
+                  Kazananlar Raporu
+                </h2>
+                <p className="text-slate-400 mt-2 text-sm font-medium">Oluşturulma Tarihi: {new Date().toLocaleDateString('tr-TR')}</p>
+              </div>
+
+              {/* Rapor Özeti */}
+              <div className="flex justify-center gap-8 mb-12">
+                <div className="text-center px-8 py-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Toplam Personel</p>
+                  <p className="text-4xl font-black text-slate-800">{employees.length}</p>
+                </div>
+                <div className="text-center px-8 py-4 bg-green-50 rounded-2xl border border-green-100">
+                  <p className="text-sm font-bold text-green-600 uppercase tracking-widest mb-1">Hedefe Ulaşan</p>
+                  <p className="text-4xl font-black text-green-700">{totalWinners}</p>
+                </div>
+              </div>
+
+              {/* Eski Personel Kazananlar Listesi */}
+              <ReportListSection 
+                title="Eski Personel Kazananları" 
+                data={processedOldData.filter(e => e.isWinner)} 
+                target={targetOld}
+                colorClass="text-purple-700 border-purple-200"
+                bgClass="bg-purple-50"
+              />
+
+              {/* Yeni Personel Kazananlar Listesi */}
+              <div className="mt-8">
+                <ReportListSection 
+                  title="Yeni Personel Kazananları" 
+                  data={processedNewData.filter(e => e.isWinner)} 
+                  target={targetNew}
+                  colorClass="text-orange-700 border-orange-200"
+                  bgClass="bg-orange-50"
+                />
+              </div>
+
+              {/* Alt Bilgi */}
+              <div className="mt-16 pt-6 border-t border-slate-100 text-center text-sm font-medium text-slate-400">
+                Bu rapor sistem tarafından otomatik olarak oluşturulmuştur. <br/>Tüm kazanan çalışma arkadaşlarımızı tebrik ederiz.
+              </div>
+
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+// ANA SAYFA: Tekrar eden tablo yapısını engellemek için alt bileşen
+function EmployeeTable({ title, icon, data, onEdit, onDelete, badgeClass, typeLabel }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:hidden">
+      <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {icon}
+          <h3 className="font-bold text-slate-800">{title}</h3>
+        </div>
+        <span className="text-sm text-slate-600 font-bold px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm">
+          {data.length} Kayıt
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs text-slate-500 bg-slate-50 uppercase border-b border-slate-200">
+            <tr>
+              <th className="px-4 py-3 font-bold tracking-wider">Ofis</th>
+              <th className="px-4 py-3 font-bold tracking-wider">Personel</th>
+              <th className="px-4 py-3 font-bold tracking-wider">Giriş Tarihi</th>
+              <th className="px-4 py-3 font-bold tracking-wider">Kategori / Hedef</th>
+              <th className="px-4 py-3 font-bold tracking-wider text-right">Aylık Satışlar</th>
+              <th className="px-4 py-3 font-bold tracking-wider text-right text-red-600">İade</th>
+              <th className="px-4 py-3 font-bold tracking-wider text-right text-blue-600">Net Ciro</th>
+              <th className="px-4 py-3 font-bold tracking-wider text-right">Kalan</th>
+              <th className="px-4 py-3 font-bold tracking-wider w-48">Başarı Oranı</th>
+              <th className="px-4 py-3 font-bold tracking-wider text-center">Durum</th>
+              <th className="px-4 py-3 font-bold tracking-wider text-center">İşlem</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan="11" className="px-4 py-8 text-center font-medium text-slate-500">
+                  Bu kategoride henüz kayıtlı personel bulunmuyor.
+                </td>
+              </tr>
+            ) : data.map((emp) => (
+              <tr key={emp.id} className={`transition-all duration-300 ${emp.isWinner ? 'bg-gradient-to-r from-green-50/80 to-transparent border-l-4 border-l-green-500 hover:from-green-100/80' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}>
+                <td className="px-4 py-3 font-bold text-slate-700">{emp.office}</td>
+                <td className="px-4 py-3">
+                  <div className={`flex items-center gap-2 font-black text-base ${emp.isWinner ? 'text-green-700' : 'text-slate-900'}`}>
+                    {emp.isWinner && <Trophy className="w-4 h-4 text-yellow-500 drop-shadow-sm" />}
+                    {emp.name}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-slate-500 font-semibold">
+                  {formatDate(emp.entryDate)}
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded text-xs font-black border uppercase ${badgeClass}`}>
+                    {typeLabel}
+                  </span>
+                  <div className="text-xs font-bold text-slate-500 mt-1">{formatTL(emp.target)}</div>
+                </td>
+                <td className="px-4 py-3 text-right text-xs font-semibold text-slate-600 space-y-1">
+                  <div className="flex justify-end gap-2"><span className="w-8 text-slate-400">Oca:</span> <span>{formatTL(emp.jan)}</span></div>
+                  <div className="flex justify-end gap-2"><span className="w-8 text-slate-400">Şub:</span> <span>{formatTL(emp.feb)}</span></div>
+                  <div className="flex justify-end gap-2"><span className="w-8 text-slate-400">Mar:</span> <span>{formatTL(emp.mar)}</span></div>
+                </td>
+                <td className="px-4 py-3 text-right text-red-600 font-bold bg-red-50/30">
+                  {emp.returns > 0 ? `-${formatTL(emp.returns)}` : '-'}
+                </td>
+                <td className="px-4 py-3 text-right font-black text-blue-700 text-base bg-blue-50/30">
+                  {formatTL(emp.netRevenue)}
+                </td>
+                <td className="px-4 py-3 text-right font-bold text-slate-600">
+                  {formatTL(emp.remaining)}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-black text-slate-700">% {emp.percentage.toFixed(1)}</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${emp.percentage >= 100 ? 'bg-green-500' : emp.percentage < 30 ? 'bg-red-500' : 'bg-blue-500'}`}
+                      style={{ width: `${Math.min(emp.percentage, 100)}%` }}
+                    ></div>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {emp.isWinner ? (
+                    <span className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-xs font-black w-32 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_0_12px_rgba(34,197,94,0.4)] transform hover:scale-105 transition-all">
+                      <Trophy className="w-3 h-3" />
+                      KAZANDI
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-black w-32 bg-red-50 text-red-600 border border-red-100">
+                      KAZANAMADI
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => onEdit(emp)}
+                      className="text-slate-400 hover:text-blue-600 transition-colors p-1.5 hover:bg-blue-50 rounded-md"
+                      title="Düzenle"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => onDelete(emp.id)}
+                      className="text-slate-400 hover:text-red-600 transition-colors p-1.5 hover:bg-red-50 rounded-md"
+                      title="Sil"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// RAPORLAR: Rapor içindeki liste bölümleri için alt bileşen
+function ReportListSection({ title, data, target, colorClass, bgClass }) {
+  if (data.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <h3 className={`text-lg font-black uppercase tracking-wider mb-4 border-b-2 pb-2 ${colorClass}`}>
+        {title} <span className="text-sm font-bold text-slate-400 ml-2">(Hedef: {formatTL(target)})</span>
+      </h3>
+      <div className="rounded-xl overflow-hidden border border-slate-200">
+        <table className="w-full text-sm text-left">
+          <thead className={`text-xs font-bold uppercase tracking-wider ${bgClass} ${colorClass}`}>
+            <tr>
+              <th className="px-6 py-3">Sıra</th>
+              <th className="px-6 py-3">Ofis</th>
+              <th className="px-6 py-3">Personel Adı</th>
+              <th className="px-6 py-3 text-right">Net Ciro</th>
+              <th className="px-6 py-3 text-right">Başarı</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {data.map((emp, index) => (
+              <tr key={emp.id}>
+                <td className="px-6 py-3 font-bold text-slate-400">#{index + 1}</td>
+                <td className="px-6 py-3 font-bold text-slate-700">{emp.office}</td>
+                <td className="px-6 py-3 font-black text-slate-900">{emp.name}</td>
+                <td className="px-6 py-3 text-right font-bold text-green-600">{formatTL(emp.netRevenue)}</td>
+                <td className="px-6 py-3 text-right font-black text-slate-800">% {emp.percentage.toFixed(0)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
