@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>İhlas Pazarlama - Antalya Tatili Takibi</title>
     
     <!-- Tailwind CSS (Tasarım için) -->
@@ -49,12 +49,31 @@
             color: #0284c7;
             filter: drop-shadow(0 20px 13px rgba(0, 0, 0, 0.3));
         }
+
+        /* Scrollbar Gizleme/İnceltme */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
     </style>
 </head>
-<body>
+<body class="bg-slate-50">
     <div id="root"></div>
 
-    <!-- type="text/babel" data-type="module" kullanarak ES Module ve JSX'i beraber çalıştırıyoruz -->
     <script type="text/babel" data-type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -62,7 +81,7 @@
 
         const { useState, useMemo, useEffect } = React;
 
-        // Firebase Başlatma (Sizin Kendi Ayarlarınız)
+        // Firebase Başlatma
         const firebaseConfig = {
             apiKey: "AIzaSyCsowA7JoTC_maRfzojfXXdg75OM3HLCsI",
             authDomain: "tatil-6fcb9.firebaseapp.com",
@@ -75,14 +94,12 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = "tatil-6fcb9"; // Veritabanındaki ana klasör adınız
+        const appId = "tatil-6fcb9"; 
 
-        // Para formatı için yardımcı fonksiyon
         const formatTL = (amount) => {
           return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(amount) + ' ₺';
         };
 
-        // Tarih formatı için yardımcı fonksiyon (Çökme korumalı)
         const formatDate = (dateString) => {
           if (!dateString) return '-';
           const date = new Date(dateString);
@@ -91,12 +108,10 @@
         };
 
         function App() {
-          // --- Veritabanı ve Auth State'leri ---
           const [user, setUser] = useState(null);
-          const [dbStatus, setDbStatus] = useState('loading'); // 'loading', 'connected', 'local', 'error'
-          const [employees, setEmployees] = useState([]); // Liste varsayılan olarak boş başlar, DB'den dolar
+          const [dbStatus, setDbStatus] = useState('loading'); 
+          const [employees, setEmployees] = useState([]); 
 
-          // --- UI State'leri ---
           const [activeTab, setActiveTab] = useState('dashboard');
           const [isFlying, setIsFlying] = useState(false);
           const [months, setMonths] = useState([
@@ -114,7 +129,6 @@
           const [deletingId, setDeletingId] = useState(null);
           const [formError, setFormError] = useState('');
 
-          // --- Firebase Auth (Kullanıcı Oturumu) ---
           useEffect(() => {
             const initAuth = async () => {
               try {
@@ -124,16 +138,13 @@
                 setDbStatus('error');
               }
             };
-            
             initAuth();
             const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
             return () => unsubscribe();
           }, []);
 
-          // --- Firebase Canlı Veri Dinleme ---
           useEffect(() => {
             if (!user) return; 
-
             setDbStatus('loading');
             const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
             const q = query(employeesRef);
@@ -149,21 +160,18 @@
               console.error("Veri çekme hatası:", err);
               setDbStatus('error');
             });
-            
             return () => unsubscribe();
           }, [user]);
 
-
-          // Tab Değiştirme ve Uçak Animasyonu Yönetimi
           const handleTabChange = (tabName) => {
             if (tabName === 'reports' && activeTab !== 'reports') {
               setIsFlying(true);
               setTimeout(() => setIsFlying(false), 2500); 
             }
             setActiveTab(tabName);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           };
 
-          // Ay Ekleme / Silme İşlemleri
           const handleAddMonth = () => {
             if (!newMonthName.trim()) return;
             const newId = 'm' + Date.now();
@@ -183,7 +191,6 @@
             return empDate >= cutDate;
           };
 
-          // Veri İşleme Fonksiyonu
           const processData = (isNewType) => {
             return employees
               .filter(emp => isNewEmployee(emp.entryDate) === isNewType)
@@ -233,7 +240,6 @@
             setFormError('');
           };
 
-          // Veri Ekleme / Güncelleme (Firebase'e yazma)
           const handleFormSubmit = async (e) => {
             e.preventDefault();
             if (!formData.name || !formData.office || !formData.entryDate) {
@@ -273,7 +279,6 @@
 
           const handleDeleteClick = (id) => setDeletingId(id);
 
-          // Veri Silme (Firebase'den silme)
           const confirmDelete = async () => {
             if (deletingId) {
               const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
@@ -317,116 +322,127 @@
 
           return (
             <div 
-              className="min-h-screen print:bg-white text-slate-800 font-sans pb-20 relative bg-cover bg-center bg-fixed"
+              className="min-h-screen print:bg-white text-slate-800 font-sans pb-24 relative bg-cover bg-center bg-fixed"
               style={{ backgroundImage: "url('https://images.unsplash.com/photo-1506929562872-bb421503ef21?q=80&w=2068&auto=format&fit=crop')" }}
             >
-              <div className="absolute inset-0 bg-slate-100/70 backdrop-blur-[6px] -z-10 print:hidden"></div>
+              {/* Arka plan overlay */}
+              <div className="absolute inset-0 bg-slate-50/80 backdrop-blur-md -z-10 print:hidden"></div>
               
               {isFlying && (
                 <div className="airplane-flyby">
-                  <i className="fa-solid fa-plane text-8xl"></i>
+                  <i className="fa-solid fa-plane text-6xl sm:text-8xl text-blue-600"></i>
                 </div>
               )}
 
-              <div className="bg-white/85 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 print:hidden shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-yellow-100 p-2 rounded-lg text-yellow-600">
-                      <i className="fa-solid fa-trophy text-xl"></i>
-                    </div>
-                    <div>
-                      <h1 className="text-xl font-bold text-slate-900 leading-tight">İhlas Pazarlama</h1>
-                      <p className="text-xs text-slate-500 flex items-center gap-2">
-                        Antalya Tatili Takip Sistemi
-                        {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Çevrimiçi Bağlandı</span>}
-                        {dbStatus === 'loading' && <span className="flex items-center gap-1 text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full"><i className="fa-solid fa-spinner fa-spin"></i> Bağlanıyor...</span>}
-                        {dbStatus === 'error' && <span className="flex items-center gap-1 text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full"><i className="fa-solid fa-circle-xmark"></i> Bağlantı Hatası</span>}
-                      </p>
+              {/* Üst Navigasyon Mobil Uyumu */}
+              <div className="bg-white/80 backdrop-blur-xl border-b border-slate-200 sticky top-0 z-40 print:hidden shadow-sm">
+                <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
+                  
+                  {/* Logo ve Başlık */}
+                  <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-gradient-to-br from-yellow-100 to-orange-100 p-2 sm:p-2.5 rounded-xl text-yellow-600 shadow-inner">
+                          <i className="fa-solid fa-trophy text-lg sm:text-xl"></i>
+                        </div>
+                        <div>
+                          <h1 className="text-lg sm:text-xl font-extrabold text-slate-900 leading-tight">İhlas Pazarlama</h1>
+                          <p className="text-[10px] sm:text-xs font-medium text-slate-500 flex items-center gap-1 sm:gap-2">
+                            Antalya Tatili 
+                            {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Çevrimiçi</span>}
+                            {dbStatus === 'loading' && <span className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-bold"><i className="fa-solid fa-spinner fa-spin"></i> Bağlanıyor</span>}
+                            {dbStatus === 'error' && <span className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold"><i className="fa-solid fa-circle-xmark"></i> Hata</span>}
+                          </p>
+                        </div>
                     </div>
                   </div>
                   
-                  <div className="flex bg-slate-100 p-1 rounded-lg">
-                    <button onClick={() => handleTabChange('dashboard')} className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm transition-all ${activeTab === 'dashboard' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-                      <i className="fa-solid fa-table-columns text-base"></i> Ana Sayfa
+                  {/* Menü Butonları - Mobil Uyumlu */}
+                  <div className="flex w-full sm:w-auto bg-slate-200/50 p-1 rounded-xl">
+                    <button onClick={() => handleTabChange('dashboard')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 active:scale-95 ${activeTab === 'dashboard' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5' : 'text-slate-600 hover:text-slate-900'}`}>
+                      <i className="fa-solid fa-table-columns"></i> <span className="hidden xs:inline">Ana Sayfa</span>
                     </button>
-                    <button onClick={() => handleTabChange('reports')} className={`flex items-center gap-2 px-6 py-2.5 rounded-md font-medium text-sm transition-all ${activeTab === 'reports' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}>
-                      <i className="fa-solid fa-plane-departure text-base"></i> Raporlar
+                    <button onClick={() => handleTabChange('reports')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 active:scale-95 ${activeTab === 'reports' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5' : 'text-slate-600 hover:text-slate-900'}`}>
+                      <i className="fa-solid fa-plane-departure"></i> <span className="hidden xs:inline">Raporlar</span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 md:p-8">
+              <div className="p-3 sm:p-4 md:p-8">
                 {activeTab === 'dashboard' && (
                   <div className="max-w-7xl mx-auto print:hidden">
-                    <div className="flex flex-wrap gap-4 mb-6">
-                      <div className="bg-white px-5 py-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 min-w-[200px]">
-                        <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
-                          <i className="fa-solid fa-users text-xl"></i>
+                    
+                    {/* Üst İstatistik Kartları (Mobil: 2 Sütun, Desktop: Flex) */}
+                    <div className="grid grid-cols-2 md:flex md:flex-wrap gap-3 sm:gap-4 mb-6">
+                      <div className="bg-white/90 backdrop-blur-sm px-4 sm:px-5 py-3 sm:py-4 rounded-2xl shadow-lg shadow-slate-200/50 border border-white/50 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-[140px] sm:min-w-[200px] transition-transform hover:-translate-y-1 duration-300">
+                        <div className="p-2.5 sm:p-3 bg-blue-50 text-blue-600 rounded-xl w-fit">
+                          <i className="fa-solid fa-users text-lg sm:text-xl"></i>
                         </div>
                         <div>
-                          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Toplam Personel</p>
-                          <p className="text-2xl font-black text-slate-800">{employees.length}</p>
+                          <p className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Toplam Personel</p>
+                          <p className="text-xl sm:text-2xl font-black text-slate-800">{employees.length}</p>
                         </div>
                       </div>
-                      <div className="bg-white px-5 py-3 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4 min-w-[200px]">
-                        <div className="p-3 bg-green-50 text-green-600 rounded-lg">
-                          <i className="fa-solid fa-trophy text-xl"></i>
+                      <div className="bg-white/90 backdrop-blur-sm px-4 sm:px-5 py-3 sm:py-4 rounded-2xl shadow-lg shadow-green-200/30 border border-white/50 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-[140px] sm:min-w-[200px] transition-transform hover:-translate-y-1 duration-300">
+                        <div className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-xl w-fit">
+                          <i className="fa-solid fa-trophy text-lg sm:text-xl"></i>
                         </div>
                         <div>
-                          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Toplam Kazanan</p>
-                          <p className="text-2xl font-black text-slate-800">{totalWinners}</p>
+                          <p className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">Toplam Kazanan</p>
+                          <p className="text-xl sm:text-2xl font-black text-slate-800">{totalWinners}</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
                       {/* Sol Panel: Ayarlar */}
-                      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-1 flex flex-col gap-5">
+                      <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-6 rounded-3xl shadow-xl shadow-slate-200/40 border border-white lg:col-span-1 flex flex-col gap-5">
                         
                         <div>
-                          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 text-blue-500">
-                            <i className="fa-solid fa-bullseye text-lg"></i> <span className="text-slate-800">Kampanya Ayarları</span>
+                          <h2 className="text-base sm:text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                            <div className="bg-blue-100 text-blue-600 p-1.5 rounded-lg"><i className="fa-solid fa-bullseye text-sm"></i></div> 
+                            Kampanya Ayarları
                           </h2>
                           <div className="space-y-4">
                             <div>
-                              <label className="block text-sm font-semibold text-slate-600 mb-1">Eski Personel Hedefi (TL)</label>
+                              <label className="block text-xs font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide">Eski Personel Hedefi</label>
                               <div className="relative">
-                                <input type="number" value={targetOld === 0 ? '' : targetOld} onChange={(e) => setTargetOld(Number(e.target.value))} className="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium text-sm" />
-                                <span className="absolute right-3 top-2 text-slate-400 font-bold">₺</span>
+                                <input type="number" value={targetOld === 0 ? '' : targetOld} onChange={(e) => setTargetOld(Number(e.target.value))} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-bold text-sm text-slate-700" />
+                                <span className="absolute right-4 top-2.5 text-slate-400 font-bold">₺</span>
                               </div>
                             </div>
                             <div>
-                              <label className="block text-sm font-semibold text-slate-600 mb-1">Yeni Personel Hedefi (TL)</label>
+                              <label className="block text-xs font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide">Yeni Personel Hedefi</label>
                               <div className="relative">
-                                <input type="number" value={targetNew === 0 ? '' : targetNew} onChange={(e) => setTargetNew(Number(e.target.value))} className="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium text-sm" />
-                                <span className="absolute right-3 top-2 text-slate-400 font-bold">₺</span>
+                                <input type="number" value={targetNew === 0 ? '' : targetNew} onChange={(e) => setTargetNew(Number(e.target.value))} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-bold text-sm text-slate-700" />
+                                <span className="absolute right-4 top-2.5 text-slate-400 font-bold">₺</span>
                               </div>
                             </div>
-                            <div className="pt-3 border-t border-slate-100">
-                              <label className="block text-sm font-semibold text-slate-600 mb-1 flex items-center gap-1 text-orange-500">
-                                <i className="fa-solid fa-calendar-days text-sm"></i> <span className="text-slate-600">Yeni Personel Miladı</span>
+                            <div className="pt-4 border-t border-slate-100">
+                              <label className="block text-xs font-bold text-orange-500 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
+                                <i className="fa-solid fa-calendar-days"></i> Yeni Personel Miladı
                               </label>
-                              <input type="date" value={cutoffDate} onChange={(e) => setCutoffDate(e.target.value)} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all font-medium text-sm" />
+                              <p className="text-[10px] text-slate-400 mb-2 ml-1 leading-tight">Bu tarih ve sonrasında işe girenler otomatik "Yeni" sayılır.</p>
+                              <input type="date" value={cutoffDate} onChange={(e) => setCutoffDate(e.target.value)} className="w-full px-4 py-2.5 bg-orange-50/50 border border-orange-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-orange-500/20 focus:border-orange-400 outline-none transition-all font-bold text-sm text-orange-800" />
                             </div>
                           </div>
                         </div>
 
                         {/* Dinamik Aylar Yönetimi */}
                         <div className="pt-4 border-t border-slate-100">
-                          <label className="block text-sm font-semibold text-slate-600 mb-3 flex items-center gap-1 text-indigo-500">
-                            <i className="fa-solid fa-calendar-check text-sm"></i> <span className="text-slate-600">Aktif Aylar</span>
+                          <label className="block text-xs font-bold text-indigo-500 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
+                            <i className="fa-solid fa-calendar-check"></i> Aktif Aylar
                           </label>
-                          <div className="flex flex-wrap gap-2 mb-3">
+                          <div className="flex flex-wrap gap-2 mb-4">
                             {months.map(m => (
-                              <span key={m.id} className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1.5 border border-indigo-100">
+                              <span key={m.id} className="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-2 border border-indigo-100 shadow-sm">
                                 {m.name}
-                                <button type="button" onClick={() => handleRemoveMonth(m.id)} className="text-indigo-400 hover:text-red-500 bg-white rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
+                                <button type="button" onClick={() => handleRemoveMonth(m.id)} className="text-indigo-400 hover:text-red-500 hover:bg-red-50 bg-white rounded-full w-4 h-4 flex items-center justify-center transition-colors">
                                   <i className="fa-solid fa-xmark text-[10px]"></i>
                                 </button>
                               </span>
                             ))}
-                            {months.length === 0 && <span className="text-xs text-red-500 font-bold">Lütfen en az bir ay ekleyin!</span>}
+                            {months.length === 0 && <span className="text-[10px] text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg">Lütfen en az bir ay ekleyin!</span>}
                           </div>
                           <div className="flex gap-2">
                             <input 
@@ -435,9 +451,9 @@
                               onChange={e => setNewMonthName(e.target.value)} 
                               onKeyPress={e => e.key === 'Enter' && handleAddMonth()}
                               placeholder="Örn: Nisan" 
-                              className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm" 
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none text-sm font-medium transition-all" 
                             />
-                            <button onClick={handleAddMonth} className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 font-bold shadow-sm transition-colors">
+                            <button onClick={handleAddMonth} className="bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-600/30 active:scale-95 transition-all">
                               <i className="fa-solid fa-plus"></i>
                             </button>
                           </div>
@@ -446,67 +462,69 @@
                       </div>
 
                       {/* Sağ Panel: Form */}
-                      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 lg:col-span-3 relative overflow-hidden">
-                        {editingId && <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>}
-                        <h2 className={`text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 ${editingId ? 'text-blue-500' : 'text-green-500'}`}>
-                          {editingId ? <i className="fa-solid fa-pen-to-square text-lg"></i> : <i className="fa-solid fa-plus text-lg"></i>}
-                          <span className="text-slate-800">{editingId ? 'Personel Bilgilerini Düzenle' : 'Yeni Personel / Veri Girişi'}</span>
+                      <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-6 rounded-3xl shadow-xl shadow-slate-200/40 border border-white lg:col-span-3 relative overflow-hidden transition-all duration-500">
+                        {editingId && <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-500 animate-pulse"></div>}
+                        <h2 className={`text-base sm:text-lg font-black mb-5 flex items-center gap-2 ${editingId ? 'text-blue-600' : 'text-slate-800'}`}>
+                          <div className={`p-1.5 rounded-lg ${editingId ? 'bg-blue-100' : 'bg-green-100 text-green-600'}`}>
+                             {editingId ? <i className="fa-solid fa-pen-to-square text-sm"></i> : <i className="fa-solid fa-user-plus text-sm"></i>}
+                          </div>
+                          {editingId ? 'Personel Bilgilerini Düzenle' : 'Yeni Personel / Veri Girişi'}
                         </h2>
                         
                         {formError && (
-                          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2 text-sm font-bold animate-pulse">
+                          <div className="mb-5 p-3 sm:p-4 bg-red-50 border border-red-100 text-red-600 rounded-xl flex items-center gap-3 text-xs sm:text-sm font-bold animate-pulse shadow-sm">
                             <i className="fa-solid fa-circle-exclamation text-lg shrink-0"></i> {formError}
                           </div>
                         )}
 
-                        <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                          <div className="md:col-span-4">
-                            <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Ad Soyad</label>
-                            <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                        <form onSubmit={handleFormSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 sm:gap-4">
+                          <div className="sm:col-span-2 md:col-span-4">
+                            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide">Ad Soyad</label>
+                            <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-800 transition-all" />
                           </div>
-                          <div className="md:col-span-4">
-                            <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Ofis</label>
-                            <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                          <div className="sm:col-span-1 md:col-span-4">
+                            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide">Ofis</label>
+                            <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-800 transition-all" />
                           </div>
-                          <div className="md:col-span-4">
-                            <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide flex items-center gap-1"><i className="fa-solid fa-calendar-days text-sm"></i> Giriş Tarihi</label>
-                            <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
+                          <div className="sm:col-span-1 md:col-span-4">
+                            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide flex items-center gap-1.5"><i className="fa-solid fa-calendar-days"></i> Giriş Tarihi</label>
+                            <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-800 transition-all" />
                           </div>
                           
                           {/* Dinamik Satış Giriş Alanları */}
-                          <div className="md:col-span-12 mt-2 pt-4 border-t border-slate-100">
-                             <label className="block text-xs font-bold text-slate-400 mb-3 uppercase tracking-wide">Aylık Satış Girişleri</label>
-                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="sm:col-span-2 md:col-span-12 mt-2 pt-4 border-t border-slate-100">
+                             <label className="block text-[11px] font-bold text-slate-400 mb-3 ml-1 uppercase tracking-widest">Aylık Satış Girişleri (TL)</label>
+                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                {months.map(m => (
                                  <div key={m.id}>
-                                   <label className="block text-[11px] font-bold text-slate-600 mb-1">{m.name} Satış (TL)</label>
+                                   <label className="block text-[10px] sm:text-[11px] font-bold text-slate-600 mb-1 ml-1">{m.name} Satış</label>
                                    <input 
                                      type="number" 
                                      value={formData.sales[m.id] || ''} 
                                      onChange={(e) => handleSalesChange(m.id, e.target.value)} 
                                      placeholder="0" 
-                                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none font-bold text-sm text-slate-700 transition-all" 
                                    />
                                  </div>
                                ))}
-                               {months.length === 0 && <p className="text-sm text-slate-400 italic">Lütfen ayarlardan ay ekleyin.</p>}
+                               {months.length === 0 && <p className="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg col-span-2">Ayları soldaki panelden ekleyin.</p>}
                              </div>
                           </div>
 
-                          <div className="md:col-span-12 border-t border-slate-100 pt-4 flex flex-col md:flex-row items-end justify-between gap-4">
-                            <div className="w-full md:w-1/4">
-                              <label className="block text-xs font-bold text-red-500 mb-1 uppercase tracking-wide">Toplam İade (TL)</label>
-                              <input name="returns" value={formData.returns} onChange={handleInputChange} type="number" placeholder="0" className="w-full px-3 py-2 bg-red-50 border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-red-700 font-bold" />
+                          <div className="sm:col-span-2 md:col-span-12 border-t border-slate-100 pt-4 mt-2 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+                            <div className="w-full sm:w-1/3 md:w-1/4">
+                              <label className="block text-[11px] font-bold text-red-500 mb-1.5 ml-1 uppercase tracking-wide">Toplam İade (TL)</label>
+                              <input name="returns" value={formData.returns} onChange={handleInputChange} type="number" placeholder="0" className="w-full px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl focus:bg-white focus:ring-4 focus:ring-red-500/20 focus:border-red-400 outline-none text-red-700 font-black text-sm transition-all" />
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0">
                               {editingId && (
-                                <button type="button" onClick={handleCancelEdit} className="bg-slate-200 hover:bg-slate-300 text-slate-800 px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2">
-                                  <i className="fa-solid fa-xmark text-base"></i> İptal
+                                <button type="button" onClick={handleCancelEdit} className="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 sm:px-6 py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2">
+                                  <i className="fa-solid fa-xmark"></i> İptal
                                 </button>
                               )}
-                              <button type="submit" disabled={months.length === 0 || dbStatus === 'error'} className={`text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 shadow-md ${(months.length === 0 || dbStatus === 'error') ? 'bg-slate-400 cursor-not-allowed' : (editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800')}`}>
-                                {editingId ? <i className="fa-solid fa-pen-to-square text-base"></i> : <i className="fa-solid fa-plus text-base"></i>}
-                                {editingId ? 'Güncelle' : 'Listeye Ekle'}
+                              <button type="submit" disabled={months.length === 0 || dbStatus === 'error'} className={`flex-1 sm:flex-none text-white px-5 sm:px-8 py-3 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg ${(months.length === 0 || dbStatus === 'error') ? 'bg-slate-300 shadow-none cursor-not-allowed' : (editingId ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30' : 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/30')}`}>
+                                {editingId ? <i className="fa-solid fa-pen-to-square"></i> : <i className="fa-solid fa-check"></i>}
+                                {editingId ? 'Güncelle' : 'Kaydet'}
                               </button>
                             </div>
                           </div>
@@ -514,18 +532,19 @@
                       </div>
                     </div>
 
-                    <div className="space-y-8">
+                    {/* Tablolar (Mobil ve Desktop Tasarımları) */}
+                    <div className="space-y-6 sm:space-y-8">
                       <EmployeeTable 
-                        title="Eski Personeller Tablosu" 
-                        icon={<i className="fa-solid fa-briefcase text-purple-600 text-lg"></i>}
+                        title="Eski Personeller" 
+                        icon={<div className="bg-purple-100 text-purple-600 p-1.5 rounded-lg"><i className="fa-solid fa-briefcase text-sm"></i></div>}
                         data={processedOldData} months={months} onEdit={handleEdit} onDelete={handleDeleteClick}
-                        badgeClass="bg-purple-100 text-purple-800 border-purple-200" typeLabel="Eski"
+                        badgeClass="bg-purple-50 text-purple-700 border-purple-100" typeLabel="Eski"
                       />
                       <EmployeeTable 
-                        title="Yeni Personeller Tablosu" 
-                        icon={<i className="fa-solid fa-user-plus text-orange-600 text-lg"></i>}
+                        title="Yeni Personeller" 
+                        icon={<div className="bg-orange-100 text-orange-600 p-1.5 rounded-lg"><i className="fa-solid fa-user-plus text-sm"></i></div>}
                         data={processedNewData} months={months} onEdit={handleEdit} onDelete={handleDeleteClick}
-                        badgeClass="bg-orange-100 text-orange-800 border-orange-200" typeLabel="Yeni"
+                        badgeClass="bg-orange-50 text-orange-700 border-orange-100" typeLabel="Yeni"
                       />
                     </div>
                   </div>
@@ -533,43 +552,44 @@
 
                 {activeTab === 'reports' && (
                   <div className="max-w-4xl mx-auto">
-                    <div className="flex flex-wrap justify-end gap-3 mb-6 print:hidden">
-                      <button onClick={handleWhatsAppShare} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center gap-2">
-                        <i className="fa-brands fa-whatsapp text-lg"></i> WhatsApp'ta Paylaş
+                    <div className="flex flex-wrap justify-end gap-2 sm:gap-3 mb-6 print:hidden">
+                      <button onClick={handleWhatsAppShare} className="flex-1 sm:flex-none bg-green-500 hover:bg-green-600 text-white px-4 sm:px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-green-500/30 flex items-center justify-center gap-2 text-sm">
+                        <i className="fa-brands fa-whatsapp text-lg"></i> WhatsApp
                       </button>
-                      <button onClick={handlePrintPDF} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm flex items-center gap-2">
-                        <i className="fa-solid fa-download text-lg"></i> PDF Olarak İndir / Yazdır
+                      <button onClick={handlePrintPDF} className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-3 rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 text-sm">
+                        <i className="fa-solid fa-print text-lg"></i> PDF / Yazdır
                       </button>
                     </div>
 
-                    <div className="bg-white p-8 md:p-12 rounded-xl shadow-lg border border-slate-200 print:shadow-none print:border-none print:p-0">
-                      <div className="text-center mb-10 pb-6 border-b-2 border-slate-100">
-                        <div className="flex justify-center mb-4 text-yellow-500 drop-shadow-md">
-                          <i className="fa-solid fa-trophy text-5xl"></i>
+                    <div className="bg-white p-6 sm:p-10 md:p-14 rounded-3xl shadow-2xl shadow-slate-200/50 border border-white print:shadow-none print:border-none print:p-0">
+                      <div className="text-center mb-8 sm:mb-12 pb-6 sm:pb-8 border-b-2 border-slate-100/60">
+                        <div className="flex justify-center mb-4 sm:mb-6 text-yellow-500 drop-shadow-xl">
+                          <i className="fa-solid fa-trophy text-5xl sm:text-6xl"></i>
                         </div>
-                        <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight mb-2">İhlas Pazarlama - Antalya Tatili</h1>
-                        <h2 className="text-xl font-bold text-slate-600">Kazananlar Raporu</h2>
-                        <p className="text-slate-400 mt-2 text-sm font-medium">Oluşturulma Tarihi: {new Date().toLocaleDateString('tr-TR')}</p>
+                        <h1 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase tracking-tight mb-2 sm:mb-3">İhlas Pazarlama</h1>
+                        <h2 className="text-lg sm:text-2xl font-extrabold text-blue-600 uppercase tracking-widest">Antalya Tatili Raporu</h2>
+                        <p className="text-slate-400 mt-3 sm:mt-4 text-xs sm:text-sm font-bold bg-slate-50 inline-block px-3 py-1 rounded-full">Tarih: {new Date().toLocaleDateString('tr-TR')}</p>
                       </div>
 
-                      <div className="flex justify-center gap-8 mb-12">
-                        <div className="text-center px-8 py-4 bg-slate-50 rounded-2xl border border-slate-100">
-                          <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-1">Toplam Personel</p>
-                          <p className="text-4xl font-black text-slate-800">{employees.length}</p>
+                      <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mb-10 sm:mb-14">
+                        <div className="text-center px-6 sm:px-10 py-4 sm:py-5 bg-slate-50/80 rounded-2xl border border-slate-100 flex-1">
+                          <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Toplam Personel</p>
+                          <p className="text-3xl sm:text-5xl font-black text-slate-800">{employees.length}</p>
                         </div>
-                        <div className="text-center px-8 py-4 bg-green-50 rounded-2xl border border-green-100">
-                          <p className="text-sm font-bold text-green-600 uppercase tracking-widest mb-1">Hedefe Ulaşan</p>
-                          <p className="text-4xl font-black text-green-700">{totalWinners}</p>
+                        <div className="text-center px-6 sm:px-10 py-4 sm:py-5 bg-gradient-to-b from-green-50 to-emerald-50 rounded-2xl border border-green-100 flex-1 shadow-inner">
+                          <p className="text-[10px] sm:text-xs font-bold text-green-600 uppercase tracking-widest mb-1.5">Tatili Kazanan</p>
+                          <p className="text-3xl sm:text-5xl font-black text-green-700">{totalWinners}</p>
                         </div>
                       </div>
 
                       <ReportListSection title="Eski Personel Kazananları" data={processedOldData.filter(e => e.isWinner)} target={targetOld} colorClass="text-purple-700 border-purple-200" bgClass="bg-purple-50" />
-                      <div className="mt-8">
+                      <div className="mt-8 sm:mt-12">
                         <ReportListSection title="Yeni Personel Kazananları" data={processedNewData.filter(e => e.isWinner)} target={targetNew} colorClass="text-orange-700 border-orange-200" bgClass="bg-orange-50" />
                       </div>
 
-                      <div className="mt-16 pt-6 border-t border-slate-100 text-center text-sm font-medium text-slate-400">
-                        Bu rapor sistem tarafından otomatik olarak oluşturulmuştur. <br/>Tüm kazanan çalışma arkadaşlarımızı tebrik ederiz.
+                      <div className="mt-12 sm:mt-20 pt-6 sm:pt-8 border-t-2 border-dashed border-slate-100 text-center">
+                        <p className="text-xs sm:text-sm font-bold text-slate-400">Bu rapor sistem tarafından otomatik olarak oluşturulmuştur.</p>
+                        <p className="text-xs sm:text-sm font-black text-slate-600 mt-1">Tüm kazanan çalışma arkadaşlarımızı tebrik ederiz! 🌴🌊</p>
                       </div>
                     </div>
                   </div>
@@ -577,18 +597,18 @@
               </div>
 
               {deletingId && (
-                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm print:hidden">
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
-                    <div className="p-6 text-center">
-                      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
-                        <i className="fa-solid fa-trash text-3xl"></i>
+                <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm print:hidden">
+                  <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-100">
+                    <div className="p-6 sm:p-8 text-center">
+                      <div className="w-16 sm:w-20 h-16 sm:h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-5 border border-red-100">
+                        <i className="fa-solid fa-trash-can text-3xl sm:text-4xl text-red-500"></i>
                       </div>
-                      <h3 className="text-xl font-bold text-slate-800 mb-2">Personeli Sil</h3>
-                      <p className="text-slate-600 text-sm">Bu personeli listeden çıkarmak istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+                      <h3 className="text-lg sm:text-xl font-black text-slate-800 mb-2">Personeli Sil</h3>
+                      <p className="text-slate-500 text-xs sm:text-sm font-medium">Bu personeli listeden çıkarmak istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
                     </div>
-                    <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-center gap-3">
-                      <button onClick={() => setDeletingId(null)} className="px-6 py-2.5 rounded-lg font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition-colors">İptal Et</button>
-                      <button onClick={confirmDelete} className="px-6 py-2.5 rounded-lg font-bold bg-red-600 hover:bg-red-700 text-white shadow-md transition-colors">Evet, Sil</button>
+                    <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-center gap-3">
+                      <button onClick={() => setDeletingId(null)} className="w-full px-6 py-3 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all text-sm">İptal Et</button>
+                      <button onClick={confirmDelete} className="w-full px-6 py-3 rounded-xl font-bold bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 active:scale-95 transition-all text-sm">Evet, Sil</button>
                     </div>
                   </div>
                 </div>
@@ -597,93 +617,173 @@
           );
         }
 
+        // ANA SAYFA TABLOSU (Mobil Kart Görünümü Entegre Edildi)
         function EmployeeTable({ title, icon, data, months, onEdit, onDelete, badgeClass, typeLabel }) {
           return (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:hidden">
-              <div className="p-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  {icon} <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
+            <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-xl shadow-slate-200/40 border border-white overflow-hidden print:hidden">
+              <div className="p-4 sm:p-5 border-b border-slate-100 bg-white/50 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  {icon} <h3 className="font-black text-slate-800 text-sm sm:text-base">{title}</h3>
                 </div>
-                <span className="text-xs text-slate-600 font-bold px-2 py-1 bg-white border border-slate-200 rounded-full shadow-sm">{data.length} Kayıt</span>
+                <span className="text-[10px] sm:text-xs text-slate-500 font-black px-3 py-1 bg-slate-100 rounded-lg">{data.length} Kayıt</span>
               </div>
-              <div className="overflow-x-auto">
+              
+              {/* MOBİL GÖRÜNÜM (Kart Tasarımı) */}
+              <div className="md:hidden flex flex-col gap-3 p-3 bg-slate-50/50">
+                {data.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400 font-bold text-xs">Bu kategoride henüz kayıtlı personel bulunmuyor.</div>
+                ) : data.map((emp) => (
+                  <div key={emp.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden transition-all hover:shadow-md">
+                    {emp.isWinner && <div className="absolute top-0 left-0 w-1.5 h-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>}
+                    
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="pl-1">
+                        <h4 className={`font-black text-sm mb-0.5 flex items-center gap-1.5 ${emp.isWinner ? 'text-green-700' : 'text-slate-800'}`}>
+                          {emp.isWinner && <i className="fa-solid fa-trophy text-yellow-500 text-xs"></i>}
+                          {emp.name}
+                        </h4>
+                        <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><i className="fa-solid fa-location-dot"></i> {emp.office}</p>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-1">
+                        {emp.isWinner ? (
+                          <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
+                            KAZANDI
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-[9px] font-black bg-slate-100 text-slate-500 border border-slate-200">
+                            KAZANAMADI
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Aylar (Mobil) */}
+                    {months.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                        {months.map(m => (
+                           <div key={m.id} className="text-[9px] px-1.5 py-0.5 rounded bg-white border border-slate-100">
+                             <span className="text-slate-400">{m.name.substring(0,3)}:</span> <span className="font-bold text-slate-700">{formatTL(emp.sales[m.id]||0)}</span>
+                           </div>
+                        ))}
+                        {emp.returns > 0 && (
+                          <div className="text-[9px] px-1.5 py-0.5 rounded bg-red-50 border border-red-100 text-red-600">
+                             <span className="font-bold">İade:</span> -{formatTL(emp.returns)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-2 text-center bg-slate-50 p-2 rounded-xl mb-3 border border-slate-100">
+                      <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Hedef</p>
+                        <p className="text-[11px] font-black text-slate-700">{formatTL(emp.target)}</p>
+                      </div>
+                      <div className="border-x border-slate-200">
+                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Net Ciro</p>
+                        <p className="text-[11px] font-black text-blue-600">{formatTL(emp.netRevenue)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Kalan</p>
+                        <p className="text-[11px] font-black text-slate-700">{formatTL(emp.remaining)}</p>
+                      </div>
+                    </div>
+
+                    <div className="mb-3 px-1">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[10px] font-bold text-slate-500">Başarı Oranı</span>
+                        <span className={`text-[10px] font-black ${emp.percentage >= 100 ? 'text-green-600' : 'text-blue-600'}`}>% {emp.percentage.toFixed(1)}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
+                        <div className={`h-full rounded-full transition-all duration-500 ${emp.percentage >= 100 ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : emp.percentage < 30 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(emp.percentage, 100)}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-3 mt-1 border-t border-slate-100">
+                      <button onClick={() => onEdit(emp)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg font-bold text-[10px] active:scale-95 transition-all"><i className="fa-solid fa-pen"></i> Düzenle</button>
+                      <button onClick={() => onDelete(emp.id)} className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg font-bold text-[10px] active:scale-95 transition-all"><i className="fa-solid fa-trash"></i> Sil</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* MASAÜSTÜ GÖRÜNÜM (Tablo Tasarımı) */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left whitespace-nowrap">
-                  <thead className="text-[11px] text-slate-500 bg-slate-50 uppercase border-b border-slate-200">
+                  <thead className="text-[10px] text-slate-400 bg-slate-50 uppercase border-b border-slate-100">
                     <tr>
-                      <th className="px-3 py-2 font-bold tracking-wider">Ofis</th>
-                      <th className="px-3 py-2 font-bold tracking-wider">Personel</th>
-                      <th className="px-3 py-2 font-bold tracking-wider">Giriş Tarihi</th>
-                      <th className="px-3 py-2 font-bold tracking-wider">Kategori / Hedef</th>
-                      <th className="px-3 py-2 font-bold tracking-wider text-right min-w-[120px]">Aylık Satışlar</th>
-                      <th className="px-3 py-2 font-bold tracking-wider text-right text-red-600">İade</th>
-                      <th className="px-3 py-2 font-bold tracking-wider text-right text-blue-600">Net Ciro</th>
-                      <th className="px-3 py-2 font-bold tracking-wider text-right">Kalan</th>
-                      <th className="px-3 py-2 font-bold tracking-wider w-32">Başarı Oranı</th>
-                      <th className="px-3 py-2 font-bold tracking-wider text-center">Durum</th>
-                      <th className="px-3 py-2 font-bold tracking-wider text-center">İşlem</th>
+                      <th className="px-4 py-3 font-black tracking-wider">Personel / Ofis</th>
+                      <th className="px-3 py-3 font-black tracking-wider text-center">Giriş / Kat.</th>
+                      <th className="px-3 py-3 font-black tracking-wider text-right min-w-[120px]">Satışlar</th>
+                      <th className="px-3 py-3 font-black tracking-wider text-right text-red-500">İade</th>
+                      <th className="px-3 py-3 font-black tracking-wider text-right text-blue-500">Net Ciro</th>
+                      <th className="px-3 py-3 font-black tracking-wider text-right">Hedef / Kalan</th>
+                      <th className="px-4 py-3 font-black tracking-wider w-36">İlerleme</th>
+                      <th className="px-3 py-3 font-black tracking-wider text-center">Durum</th>
+                      <th className="px-4 py-3 font-black tracking-wider text-center">İşlem</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-50">
                     {data.length === 0 ? (
-                      <tr><td colSpan="11" className="px-4 py-6 text-center font-medium text-slate-500 text-sm">Bu kategoride henüz kayıtlı personel bulunmuyor.</td></tr>
+                      <tr><td colSpan="10" className="px-4 py-8 text-center font-bold text-slate-400 text-sm">Kayıt bulunmuyor.</td></tr>
                     ) : data.map((emp) => (
-                      <tr key={emp.id} className={`transition-all duration-300 ${emp.isWinner ? 'bg-gradient-to-r from-green-50/80 to-transparent border-l-4 border-l-green-500 hover:from-green-100/80' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}>
-                        <td className="px-3 py-1.5 font-bold text-slate-700 text-xs">{emp.office}</td>
-                        <td className="px-3 py-1.5">
-                          <div className={`flex items-center gap-1.5 font-black text-sm ${emp.isWinner ? 'text-green-700' : 'text-slate-900'}`}>
+                      <tr key={emp.id} className={`transition-all duration-300 hover:bg-slate-50/50 ${emp.isWinner ? 'bg-green-50/20' : ''}`}>
+                        <td className="px-4 py-2.5 relative">
+                          {emp.isWinner && <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>}
+                          <div className={`font-black text-[13px] flex items-center gap-1.5 ${emp.isWinner ? 'text-green-700' : 'text-slate-800'}`}>
                             {emp.isWinner && <i className="fa-solid fa-trophy text-yellow-500 text-[10px] drop-shadow-sm"></i>} {emp.name}
                           </div>
+                          <div className="text-[10px] font-bold text-slate-400 mt-0.5">{emp.office}</div>
                         </td>
-                        <td className="px-3 py-1.5 text-slate-500 font-semibold text-xs">{formatDate(emp.entryDate)}</td>
-                        <td className="px-3 py-1.5">
-                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-black border uppercase ${badgeClass}`}>{typeLabel}</span>
-                          <div className="text-[10px] font-bold text-slate-500 mt-0.5">{formatTL(emp.target)}</div>
+                        <td className="px-3 py-2.5 text-center">
+                          <div className="text-[11px] font-bold text-slate-600">{formatDate(emp.entryDate)}</div>
+                          <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-black border uppercase ${badgeClass}`}>{typeLabel}</span>
                         </td>
-                        
-                        <td className="px-3 py-1.5 text-right text-[11px] font-semibold text-slate-600 space-y-0.5">
-                          {months.length === 0 ? <span className="text-slate-400">-</span> : 
+                        <td className="px-3 py-2.5 text-right text-[10px] font-bold text-slate-500 space-y-0.5">
+                          {months.length === 0 ? <span>-</span> : 
                             months.map(m => (
-                              <div key={m.id} className="flex justify-between gap-2 border-b border-slate-100 last:border-0 pb-0.5 last:pb-0">
-                                <span className="text-slate-400 w-12 text-left truncate" title={m.name}>{m.name.substring(0,3)}:</span> 
+                              <div key={m.id} className="flex justify-end gap-2">
+                                <span className="text-slate-300">{m.name.substring(0,3)}:</span> 
                                 <span className="text-slate-700">{formatTL(emp.sales[m.id] || 0)}</span>
                               </div>
                             ))
                           }
                         </td>
-
-                        <td className="px-3 py-1.5 text-right text-red-600 font-bold bg-red-50/30 text-xs">
+                        <td className="px-3 py-2.5 text-right text-red-500 font-black text-[11px] bg-red-50/10">
                           {emp.returns > 0 ? `-${formatTL(emp.returns)}` : '-'}
                         </td>
-                        <td className="px-3 py-1.5 text-right font-black text-blue-700 text-sm bg-blue-50/30">
+                        <td className="px-3 py-2.5 text-right font-black text-blue-600 text-xs bg-blue-50/10">
                           {formatTL(emp.netRevenue)}
                         </td>
-                        <td className="px-3 py-1.5 text-right font-bold text-slate-600 text-xs">
-                          {formatTL(emp.remaining)}
+                        <td className="px-3 py-2.5 text-right">
+                          <div className="text-[10px] font-bold text-slate-400 border-b border-slate-100 pb-0.5 mb-0.5">H: {formatTL(emp.target)}</div>
+                          <div className="text-[11px] font-black text-slate-700">{formatTL(emp.remaining)}</div>
                         </td>
-                        <td className="px-3 py-1.5">
-                          <div className="flex justify-between items-center mb-0.5">
-                            <span className="text-[10px] font-black text-slate-700">% {emp.percentage.toFixed(1)}</span>
+                        <td className="px-4 py-2.5">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className={`text-[10px] font-black ${emp.percentage >= 100 ? 'text-green-600' : 'text-blue-600'}`}>% {emp.percentage.toFixed(1)}</span>
                           </div>
-                          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-500 ${emp.percentage >= 100 ? 'bg-green-500' : emp.percentage < 30 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(emp.percentage, 100)}%` }}></div>
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden shadow-inner">
+                            <div className={`h-full rounded-full transition-all duration-500 ${emp.percentage >= 100 ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]' : emp.percentage < 30 ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${Math.min(emp.percentage, 100)}%` }}></div>
                           </div>
                         </td>
-                        <td className="px-3 py-1.5 text-center">
+                        <td className="px-3 py-2.5 text-center">
                           {emp.isWinner ? (
-                            <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black w-24 bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-[0_0_8px_rgba(34,197,94,0.4)] transform hover:scale-105 transition-all">
-                              <i className="fa-solid fa-trophy text-[9px]"></i> KAZANDI
+                            <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-sm">
+                              KAZANDI
                             </span>
                           ) : (
-                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-black w-24 bg-red-50 text-red-600 border border-red-100">KAZANAMADI</span>
+                            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-[9px] font-black bg-slate-100 text-slate-500 border border-slate-200">
+                              BEKLİYOR
+                            </span>
                           )}
                         </td>
-                        <td className="px-3 py-1.5 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => onEdit(emp)} className="text-slate-400 hover:text-blue-600 transition-colors p-1 hover:bg-blue-50 rounded-md" title="Düzenle">
-                              <i className="fa-solid fa-pen-to-square text-sm"></i>
+                        <td className="px-4 py-2.5 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button onClick={() => onEdit(emp)} className="text-blue-400 hover:text-blue-600 hover:bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-95" title="Düzenle">
+                              <i className="fa-solid fa-pen text-xs"></i>
                             </button>
-                            <button onClick={() => onDelete(emp.id)} className="text-slate-400 hover:text-red-600 transition-colors p-1 hover:bg-red-50 rounded-md" title="Sil">
-                              <i className="fa-solid fa-trash text-sm"></i>
+                            <button onClick={() => onDelete(emp.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-95" title="Sil">
+                              <i className="fa-solid fa-trash text-xs"></i>
                             </button>
                           </div>
                         </td>
@@ -696,32 +796,37 @@
           );
         }
 
+        // RAPORLAR (Daha şık tablolar)
         function ReportListSection({ title, data, target, colorClass, bgClass }) {
           if (data.length === 0) return null;
           return (
-            <div className="mb-4">
-              <h3 className={`text-base font-black uppercase tracking-wider mb-2 border-b-2 pb-1 ${colorClass}`}>
-                {title} <span className="text-xs font-bold text-slate-400 ml-2">(Hedef: {formatTL(target)})</span>
-              </h3>
-              <div className="rounded-lg overflow-hidden border border-slate-200">
-                <table className="w-full text-xs text-left">
-                  <thead className={`font-bold uppercase tracking-wider ${bgClass} ${colorClass}`}>
+            <div className="mb-6 sm:mb-8">
+              <div className={`flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-3 border-b-2 pb-2 ${colorClass}`}>
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wider">{title}</h3>
+                <span className="text-[10px] sm:text-xs font-bold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-100 shadow-sm">Hedef: {formatTL(target)}</span>
+              </div>
+              <div className="rounded-xl sm:rounded-2xl overflow-x-auto border border-slate-100 shadow-sm">
+                <table className="w-full text-xs text-left whitespace-nowrap">
+                  <thead className={`font-black uppercase tracking-wider text-[10px] sm:text-[11px] ${bgClass} ${colorClass}`}>
                     <tr>
-                      <th className="px-4 py-2">Sıra</th>
-                      <th className="px-4 py-2">Ofis</th>
-                      <th className="px-4 py-2">Personel Adı</th>
-                      <th className="px-4 py-2 text-right">Net Ciro</th>
-                      <th className="px-4 py-2 text-right">Başarı</th>
+                      <th className="px-3 sm:px-5 py-2.5 sm:py-3">Sıra</th>
+                      <th className="px-3 sm:px-5 py-2.5 sm:py-3">Personel Bilgisi</th>
+                      <th className="px-3 sm:px-5 py-2.5 sm:py-3 text-right">Net Ciro</th>
+                      <th className="px-3 sm:px-5 py-2.5 sm:py-3 text-right">Başarı</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
+                  <tbody className="divide-y divide-slate-50 bg-white">
                     {data.map((emp, index) => (
-                      <tr key={emp.id}>
-                        <td className="px-4 py-1.5 font-bold text-slate-400">#{index + 1}</td>
-                        <td className="px-4 py-1.5 font-bold text-slate-700">{emp.office}</td>
-                        <td className="px-4 py-1.5 font-black text-slate-900">{emp.name}</td>
-                        <td className="px-4 py-1.5 text-right font-bold text-green-600">{formatTL(emp.netRevenue)}</td>
-                        <td className="px-4 py-1.5 text-right font-black text-slate-800">% {emp.percentage.toFixed(0)}</td>
+                      <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-3 sm:px-5 py-2 sm:py-3 font-bold text-slate-400">#{index + 1}</td>
+                        <td className="px-3 sm:px-5 py-2 sm:py-3">
+                           <div className="font-black text-slate-800 text-xs sm:text-sm">{emp.name}</div>
+                           <div className="font-bold text-slate-400 text-[9px] sm:text-[10px]">{emp.office}</div>
+                        </td>
+                        <td className="px-3 sm:px-5 py-2 sm:py-3 text-right font-black text-green-600 text-xs sm:text-sm">{formatTL(emp.netRevenue)}</td>
+                        <td className="px-3 sm:px-5 py-2 sm:py-3 text-right">
+                           <span className="bg-green-100 text-green-700 px-2 py-1 rounded-lg font-black text-[10px] sm:text-xs shadow-sm">% {emp.percentage.toFixed(0)}</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
