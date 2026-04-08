@@ -1,68 +1,8 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <!--
-    ========================================================================
-    🚀 MASAÜSTÜNE YÜKLEME (PWA) İÇİN GEREKLİ EK DOSYALAR 🚀
-    Uygulamanın bilgisayara/telefona bir uygulama gibi yüklenebilmesi ve 
-    güncellemeleri otomatik alması için bu 'index.html' dosyasının tam yanına 
-    (aynı klasöre) aşağıdaki 2 adet dosyayı oluşturmalısınız:
-
-    1. DOSYA ADI: manifest.json
-    İçeriği:
-    {
-      "name": "Antalya Tatili Portalı",
-      "short_name": "Antalya Tatili",
-      "start_url": "./index.html",
-      "display": "standalone",
-      "background_color": "#f8fafc",
-      "theme_color": "#06b6d4",
-      "icons": [
-        {
-          "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-          "sizes": "512x512",
-          "type": "image/png"
-        }
-      ]
-    }
-
-    2. DOSYA ADI: sw.js
-    İçeriği:
-    const CACHE_NAME = 'tatil-app-v1'; // Kodu her güncellediğinizde burayı v2, v3 yapın
-
-    self.addEventListener('install', (event) => {
-      self.skipWaiting();
-    });
-
-    self.addEventListener('activate', (event) => {
-      event.waitUntil(clients.claim());
-    });
-
-    self.addEventListener('fetch', (event) => {
-      // Önce ağdan en güncel halini çekmeye çalışır, yoksa önbelleği kullanır.
-      event.respondWith(
-        fetch(event.request)
-          .then((response) => {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-            return response;
-          })
-          .catch(() => caches.match(event.request))
-      );
-    });
-    ========================================================================
-    -->
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <!-- PWA Meta Etiketleri -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#06b6d4">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135715.png">
-
     <title>İhlas Pazarlama - Antalya Tatili Portalı</title>
     
     <!-- Google Fonts (Inter) -->
@@ -79,10 +19,12 @@
                         'fade-in': 'fadeIn 0.5s ease-out',
                         'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
                     },
                     keyframes: {
                         fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
                     }
                 }
             }
@@ -102,26 +44,11 @@
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <!-- Service Worker Kayıt ve Güncelleme Kontrolü -->
+    <!-- PWA Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(reg => {
-                    console.log('ServiceWorker başarıyla kaydedildi.');
-                    
-                    reg.onupdatefound = () => {
-                        const installingWorker = reg.installing;
-                        installingWorker.onstatechange = () => {
-                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                if(confirm('Uygulamanın yeni bir sürümü (güncelleme) mevcut! Hemen güncellemek için sayfayı yenilemek ister misiniz?')) {
-                                    window.location.reload();
-                                }
-                            }
-                        };
-                    };
-                }).catch(err => {
-                    console.log('ServiceWorker kaydı başarısız oldu (Lokal çalışıyorsanız normaldir):', err);
-                });
+                navigator.serviceWorker.register('sw.js').catch(()=>{});
             });
         }
     </script>
@@ -147,6 +74,14 @@
             color: #fff; filter: drop-shadow(0 20px 20px rgba(0, 0, 0, 0.4));
         }
 
+        /* Progress Bar Suyu */
+        .water-fill {
+            background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #06b6d4 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 3s ease infinite;
+        }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
         /* Skeleton Loading */
         .skeleton {
             background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
@@ -155,13 +90,10 @@
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        /* Progress Bar Suyu */
-        .water-fill {
-            background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #06b6d4 100%);
-            background-size: 200% 200%;
-            animation: gradientMove 3s ease infinite;
+        /* Grafik Çubukları Animasyonu */
+        .bar-chart-fill {
+            transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased">
@@ -174,7 +106,7 @@
 
         const { useState, useMemo, useEffect } = React;
 
-        // Firebase Başlatma
+        // --- Firebase Başlatma ---
         const firebaseConfig = {
             apiKey: "AIzaSyCsowA7JoTC_maRfzojfXXdg75OM3HLCsI",
             authDomain: "tatil-6fcb9.firebaseapp.com",
@@ -215,7 +147,38 @@
             return colors[sum % colors.length];
         };
 
-        // --- Alt Bileşenler (Components) ---
+        // Ses Efektleri Sentezleyici (Sıfır Dışa Bağımlılık)
+        const playSound = (type) => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                if (type === 'swoosh') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.8);
+                    gain.gain.setValueAtTime(0, ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.4);
+                    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.8);
+                } else if (type === 'cheer') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400, ctx.currentTime);
+                    osc.frequency.setValueAtTime(600, ctx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(800, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.5);
+                }
+            } catch(e) {}
+        };
+
+        // --- Alt Bileşenler ---
 
         // 1. Geri Sayım Sayacı Bileşeni
         const CountdownTimer = () => {
@@ -238,7 +201,7 @@
             const minutes = isExpired ? 0 : Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
 
             return (
-                <div className="flex flex-col items-center justify-center bg-white/10 rounded-3xl p-6 shadow-xl border border-white/20 text-white w-full md:w-auto">
+                <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/20 text-white w-full md:w-auto h-full">
                     <h3 className="text-sm font-bold uppercase tracking-widest mb-4 opacity-90"><i className="fa-regular fa-clock"></i> TATİL SÜRECİ</h3>
                     <div className="flex gap-4 sm:gap-6 text-center">
                         <div className="flex flex-col"><span className="text-4xl sm:text-5xl font-black drop-shadow-md">{days.toString().padStart(2, '0')}</span><span className="text-[10px] sm:text-xs font-bold opacity-80 mt-1 uppercase tracking-wider">GÜN</span></div>
@@ -273,6 +236,7 @@
                     3: 'from-orange-300 to-orange-500 border-orange-200 text-orange-900'
                 };
                 const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+                // Podyum boyları düşürüldü
                 const heights = { 1: 'h-36 sm:h-44 z-10 scale-105', 2: 'h-28 sm:h-36', 3: 'h-24 sm:h-32' };
 
                 return (
@@ -318,7 +282,6 @@
             </div>
         );
 
-
         // --- Ana Uygulama ---
         function App() {
           const [user, setUser] = useState(null);
@@ -329,8 +292,16 @@
           const [activeTab, setActiveTab] = useState('dashboard');
           const [isFlying, setIsFlying] = useState(false);
           const [isModalOpen, setIsModalOpen] = useState(false);
-          const [isDeletingAll, setIsDeletingAll] = useState(false); // Tümünü sil onayı
-          const [settingsSaved, setSettingsSaved] = useState(false); // Kaydedildi bildirimi
+          const [isDeletingAll, setIsDeletingAll] = useState(false);
+          const [settingsSaved, setSettingsSaved] = useState(false);
+          
+          // Profil Modalı ve Arama Filtreleri
+          const [selectedProfile, setSelectedProfile] = useState(null); // Yolcu Paneli için
+          const [searchTerm, setSearchTerm] = useState('');
+          const [filterOffice, setFilterOffice] = useState('All');
+          
+          // Tema Ayarı
+          const [isNightMode, setIsNightMode] = useState(false);
 
           // Settings
           const [months, setMonths] = useState([{ id: 'm1', name: 'Ocak' }, { id: 'm2', name: 'Şubat' }, { id: 'm3', name: 'Mart' }]);
@@ -346,6 +317,23 @@
           const [deletingId, setDeletingId] = useState(null);
           const [formError, setFormError] = useState('');
 
+          // Saat Kontrolü (Atmosfer)
+          useEffect(() => {
+              const checkTime = () => {
+                  const hour = new Date().getHours();
+                  setIsNightMode(hour >= 19 || hour < 6); // 19:00 ile 06:00 arası akşam
+              };
+              checkTime();
+              const timer = setInterval(checkTime, 60000);
+              return () => clearInterval(timer);
+          }, []);
+
+          // Ofis Listesi
+          const uniqueOffices = useMemo(() => {
+              const offices = employees.map(e => e.office).filter(Boolean);
+              return [...new Set(offices)].sort();
+          }, [employees]);
+
           useEffect(() => {
             const initAuth = async () => { try { await signInAnonymously(auth); } catch(err) { setDbStatus('error'); } };
             initAuth();
@@ -353,7 +341,6 @@
             return () => unsubscribe();
           }, []);
 
-          // Personel Verilerini Çekme
           useEffect(() => {
             if (!user) return; 
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'employees'));
@@ -366,7 +353,7 @@
             return () => unsubscribe();
           }, [user]);
 
-          // Ayarları Veritabanından Çekme
+          // Ayarları Çek
           useEffect(() => {
             if (!user) return;
             const settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main');
@@ -378,12 +365,13 @@
                     if (data.cutoffDate) setCutoffDate(data.cutoffDate);
                     if (data.months) setMonths(data.months);
                 }
-            }, (err) => console.error("Ayarlar çekilemedi:", err));
+            });
             return () => unsubscribe();
           }, [user]);
 
           const fireConfetti = () => {
             if (typeof confetti !== 'undefined') {
+                playSound('cheer');
                 const end = Date.now() + 3000;
                 const frame = () => {
                     confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#2dd4bf', '#f59e0b', '#0ea5e9'] });
@@ -396,7 +384,10 @@
 
           const handleTabChange = (tabName) => {
             if (tabName === 'reports' && activeTab !== 'reports') {
-              setIsFlying(true); setTimeout(() => setIsFlying(false), 2500); setTimeout(() => fireConfetti(), 800);
+              setIsFlying(true); 
+              playSound('swoosh');
+              setTimeout(() => setIsFlying(false), 2500); 
+              setTimeout(() => fireConfetti(), 800);
             }
             setActiveTab(tabName); window.scrollTo({ top: 0, behavior: 'smooth' });
           };
@@ -407,38 +398,23 @@
             setMonths([...months, { id: 'm' + Date.now(), name: newMonthName.trim() }]);
             setNewMonthName('');
           };
-
-          const handleRemoveMonth = (idToRemove) => {
-            setMonths(months.filter(m => m.id !== idToRemove));
-          };
-
-          // Ayarları Kaydet
+          const handleRemoveMonth = (idToRemove) => setMonths(months.filter(m => m.id !== idToRemove));
+          
           const handleSaveSettings = async () => {
               if (dbStatus !== 'connected') return;
               try {
-                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main'), {
-                      targetOld,
-                      targetNew,
-                      cutoffDate,
-                      months
-                  });
-                  setSettingsSaved(true);
-                  setTimeout(() => setSettingsSaved(false), 3000); // 3 sn sonra tik işaretini gizle
-              } catch (err) {
-                  console.error("Ayarlar kaydedilemedi:", err);
-              }
+                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main'), { targetOld, targetNew, cutoffDate, months });
+                  setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 3000);
+              } catch (err) {}
           };
 
-          // Tüm Verileri Temizle
           const confirmDeleteAll = async () => {
               if (dbStatus !== 'connected') return;
               try {
                   const promises = employees.map(emp => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id.toString())));
                   await Promise.all(promises);
                   setIsDeletingAll(false);
-              } catch (err) {
-                  console.error("Tümünü silme hatası:", err);
-              }
+              } catch (err) {}
           };
 
           const isNewEmployee = (dateStr) => {
@@ -449,20 +425,50 @@
             return empDate >= cutDate;
           };
 
+          // Gelişmiş Veri İşleme ve Rozet Atama (Gamification)
           const processData = (isNewType) => {
-            return employees.filter(emp => isNewEmployee(emp.entryDate) === isNewType).map(emp => {
+            let filtered = employees.filter(emp => isNewEmployee(emp.entryDate) === isNewType);
+            
+            // Arama ve Filtreleme
+            if (searchTerm) {
+                filtered = filtered.filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            }
+            if (filterOffice !== 'All') {
+                filtered = filtered.filter(e => e.office === filterOffice);
+            }
+
+            const processed = filtered.map(emp => {
                 const totalSales = months.reduce((sum, m) => sum + (Number(emp.sales[m.id]) || 0), 0);
                 const netRevenue = totalSales - (Number(emp.returns) || 0);
                 const currentTarget = Number(isNewType ? targetNew : targetOld) || 0;
                 const remaining = currentTarget - netRevenue;
                 let percentage = currentTarget > 0 ? (netRevenue / currentTarget) * 100 : 0;
-                return { ...emp, target: currentTarget, netRevenue, remaining: Math.max(0, remaining), percentage, isWinner: currentTarget > 0 && netRevenue >= currentTarget };
-              }).sort((a, b) => b.percentage - a.percentage);
+                
+                return { ...emp, target: currentTarget, totalSales, netRevenue, remaining: Math.max(0, remaining), percentage, isWinner: currentTarget > 0 && netRevenue >= currentTarget, badges: [] };
+            }).sort((a, b) => b.percentage - a.percentage);
+
+            // Rozet Atamaları
+            if (processed.length > 0) {
+                // Ciro Kralı
+                const maxCiro = Math.max(...processed.map(e => e.netRevenue));
+                if (maxCiro > 0) {
+                    processed.forEach(e => { if(e.netRevenue === maxCiro) e.badges.push({icon: '👑', name: 'Ciro Kralı', color: 'text-amber-500 bg-amber-100'}); });
+                }
+                // Kusursuz
+                processed.forEach(e => { if(e.returns === 0 && e.netRevenue > 0) e.badges.push({icon: '🛡️', name: 'Kusursuz', color: 'text-indigo-500 bg-indigo-100'}); });
+            }
+
+            return processed;
           };
 
-          const processedOldData = useMemo(() => processData(false), [employees, targetOld, cutoffDate, months]);
-          const processedNewData = useMemo(() => processData(true), [employees, targetNew, cutoffDate, months]);
-          const totalWinners = processedOldData.filter(e => e.isWinner).length + processedNewData.filter(e => e.isWinner).length;
+          const processedOldData = useMemo(() => processData(false), [employees, targetOld, cutoffDate, months, searchTerm, filterOffice]);
+          const processedNewData = useMemo(() => processData(true), [employees, targetNew, cutoffDate, months, searchTerm, filterOffice]);
+          const totalWinners = employees.filter(emp => {
+              const totalSales = months.reduce((sum, m) => sum + (Number(emp.sales[m.id]) || 0), 0);
+              const netRevenue = totalSales - (Number(emp.returns) || 0);
+              const t = isNewEmployee(emp.entryDate) ? targetNew : targetOld;
+              return t > 0 && netRevenue >= t;
+          }).length;
 
           // --- Form Modalı İşlemleri ---
           const openAddModal = () => {
@@ -472,33 +478,25 @@
           
           const handleEdit = (employee) => {
             setFormData({ name: employee.name, office: employee.office, entryDate: employee.entryDate || '', sales: { ...employee.sales }, returns: employee.returns || '' });
-            setEditingId(employee.id); setFormError(''); setIsModalOpen(true);
+            setEditingId(employee.id); setFormError(''); setIsModalOpen(true); setSelectedProfile(null);
           };
 
           const handleInputChange = (e) => {
             const { name, value } = e.target;
-            if (name === 'returns') {
-              setFormData(prev => ({ ...prev, [name]: parseInputNumber(value) }));
-            } else {
-              setFormData(prev => ({ ...prev, [name]: value }));
-            }
+            if (name === 'returns') setFormData(prev => ({ ...prev, [name]: parseInputNumber(value) }));
+            else setFormData(prev => ({ ...prev, [name]: value }));
             if (formError) setFormError('');
           };
 
           const handleSalesChange = (monthId, value) => {
-            setFormData(prev => ({
-              ...prev,
-              sales: { ...prev.sales, [monthId]: parseInputNumber(value) }
-            }));
+            setFormData(prev => ({ ...prev, sales: { ...prev.sales, [monthId]: parseInputNumber(value) } }));
           };
 
           const handleFormSubmit = async (e) => {
             e.preventDefault();
             if (!formData.name || !formData.office || !formData.entryDate) {
-              setFormError("Lütfen isim, ofis ve giriş tarihini doldurunuz.");
-              setTimeout(() => setFormError(''), 4000); return;
+              setFormError("Lütfen isim, ofis ve giriş tarihini doldurunuz."); setTimeout(() => setFormError(''), 4000); return;
             }
-
             const cleanSales = {};
             months.forEach(m => { cleanSales[m.id] = Number(formData.sales[m.id]) || 0; });
             const payload = { office: formData.office.toUpperCase(), name: formData.name.toUpperCase(), entryDate: formData.entryDate, sales: cleanSales, returns: Number(formData.returns) || 0 };
@@ -509,13 +507,15 @@
               else {
                 await setDoc(doc(employeesRef, Date.now().toString()), payload);
                 const tempNet = Object.values(cleanSales).reduce((a,b)=>a+b,0) - (Number(formData.returns)||0);
-                if((isNewEmployee(formData.entryDate) ? targetNew : targetOld) > 0 && tempNet >= (isNewEmployee(formData.entryDate) ? targetNew : targetOld)) setTimeout(()=>fireConfetti(), 300);
+                if((isNewEmployee(formData.entryDate) ? targetNew : targetOld) > 0 && tempNet >= (isNewEmployee(formData.entryDate) ? targetNew : targetOld)) {
+                    playSound('cheer'); setTimeout(()=>fireConfetti(), 300);
+                }
               }
               setIsModalOpen(false);
             } catch (err) { setFormError("Bağlantı hatası oluştu."); }
           };
 
-          const handleDeleteClick = (id) => setDeletingId(id);
+          const handleDeleteClick = (id) => { setDeletingId(id); setSelectedProfile(null); };
 
           const confirmDelete = async () => {
             if (deletingId) {
@@ -524,39 +524,86 @@
             }
           };
 
-          // --- Ana Görünüm Render ---
-          const bgImageUrl = activeTab === 'dashboard' 
-            ? "url('https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=2062&auto=format&fit=crop')" 
-            : "url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?q=80&w=2070&auto=format&fit=crop')";
+          // WhatsApp Raporu
+          const generateWhatsAppText = () => {
+            let text = `✈️🌴 *İHLAS PAZARLAMA - ANTALYA TATİLİ RAPORU* 🌴✈️\n\n`;
+            text += `📊 *Genel Özet*\n👥 Toplam Personel: ${employees.length}\n🍹 Tatili Kazanan: ${totalWinners}\n\n`;
+            
+            const processWhatsAppList = (isNew) => employees.filter(emp => isNewEmployee(emp.entryDate) === isNew)
+              .map(emp => {
+                const total = months.reduce((s, m) => s + (Number(emp.sales[m.id])||0), 0) - (Number(emp.returns)||0);
+                const tgt = isNew ? targetNew : targetOld;
+                return { ...emp, pct: tgt>0 ? (total/tgt)*100 : 0 };
+              }).filter(e => e.pct >= 100).sort((a,b)=>b.pct-a.pct);
+
+            const oldWinners = processWhatsAppList(false);
+            if (oldWinners.length > 0) {
+              text += `🌟 *ESKİ PERSONEL KAZANANLAR*\n`;
+              oldWinners.forEach((e, i) => { text += `${i + 1}. ${e.name} (${e.office})\n`; });
+              text += `\n`;
+            }
+
+            const newWinners = processWhatsAppList(true);
+            if (newWinners.length > 0) {
+              text += `🌟 *YENİ PERSONEL KAZANANLAR*\n`;
+              newWinners.forEach((e, i) => { text += `${i + 1}. ${e.name} (${e.office})\n`; });
+              text += `\n`;
+            }
+            return text;
+          };
+
+          // Tema URL'leri (Gündüz ve Akşam)
+          const bgImageUrl = activeTab === 'reports' 
+            ? "url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?q=80&w=2070&auto=format&fit=crop')" // Raporlar her zaman gün batımı
+            : isNightMode 
+                ? "url('https://images.unsplash.com/photo-1534008757030-27299c4371b6?q=80&w=2070&auto=format&fit=crop')" // Akşam/Gece
+                : "url('https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=2062&auto=format&fit=crop')"; // Gündüz
+
+          // Overlay Rengi
+          const overlayClass = isNightMode 
+            ? "bg-slate-900/70 backdrop-blur-[6px]" 
+            : "bg-cyan-900/40 sm:bg-white/60 backdrop-blur-md";
+
+          const getAIAdvice = (emp) => {
+              if (emp.isWinner) return "Harika iş çıkardın! Valizini hazırlamaya başla. 🏖️";
+              if (emp.percentage > 75) return "Çok yaklaştın! Sadece ufak bir itici güce ihtiyacın var, gaza bas! 🚀";
+              if (emp.percentage > 40) return "İyi gidiyorsun ama Antalya için tempoyu biraz daha artırmalısın. 💪";
+              return "Daha yolun başındayız, Antalya'yı hayal et ve motivasyonunu yüksek tut! 🌟";
+          };
 
           return (
             <div className="min-h-screen print:bg-white text-slate-800 font-sans pb-24 relative bg-cover bg-center bg-fixed transition-all duration-1000" style={{ backgroundImage: bgImageUrl }}>
-              <div className="absolute inset-0 bg-gradient-to-b from-cyan-900/60 to-slate-900/80 -z-10 print:hidden transition-all duration-1000"></div>
+              <div className={`absolute inset-0 -z-10 print:hidden transition-all duration-1000 ${overlayClass}`}></div>
               
-              {isFlying && <div className="airplane-flyby"><i className="fa-solid fa-plane text-6xl sm:text-8xl drop-shadow-xl"></i></div>}
+              {isFlying && <div className="airplane-flyby"><i className="fa-solid fa-plane text-6xl sm:text-8xl drop-shadow-xl text-white"></i></div>}
 
-              {/* Üst Navigasyon */}
-              <div className="bg-white/10 backdrop-blur-md border-b border-white/20 sticky top-0 z-40 print:hidden shadow-lg shadow-black/10">
+              {/* Üst Navigasyon & Atmosfer Paneli */}
+              <div className={`border-b sticky top-0 z-40 print:hidden transition-colors duration-1000 shadow-lg ${isNightMode ? 'bg-slate-900/80 border-slate-700/50' : 'bg-white/10 backdrop-blur-xl border-white/20'}`}>
                 <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-gradient-to-br from-cyan-400 to-blue-600 p-2.5 rounded-2xl text-white shadow-sm">
-                      <i className="fa-solid fa-umbrella-beach text-xl"></i>
-                    </div>
-                    <div>
-                      <h1 className="text-xl font-extrabold text-white leading-tight tracking-tight drop-shadow-sm">İhlas Pazarlama</h1>
-                      <p className="text-xs font-bold text-cyan-100 flex items-center gap-2 uppercase tracking-widest drop-shadow-sm">
-                        Antalya Tatili 
-                        {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[9px] bg-emerald-500/80 text-white px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Çevrimiçi</span>}
-                        {dbStatus === 'loading' && <span className="flex items-center gap-1 text-[9px] bg-amber-500/80 text-white px-2 py-0.5 rounded-full"><i className="fa-solid fa-spinner fa-spin"></i> Bağlanıyor</span>}
-                        {dbStatus === 'error' && <span className="flex items-center gap-1 text-[9px] bg-rose-500/80 text-white px-2 py-0.5 rounded-full"><i className="fa-solid fa-triangle-exclamation"></i> Hata</span>}
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2.5 rounded-2xl text-white shadow-lg ${isNightMode ? 'bg-indigo-600' : 'bg-gradient-to-br from-cyan-400 to-blue-600'}`}>
+                          <i className="fa-solid fa-umbrella-beach text-xl"></i>
+                        </div>
+                        <div>
+                          <h1 className={`text-xl font-extrabold leading-tight tracking-tight drop-shadow-md ${isNightMode ? 'text-white' : 'text-white sm:text-slate-800'}`}>İhlas Pazarlama</h1>
+                          <p className={`text-xs font-bold flex items-center gap-2 uppercase tracking-widest drop-shadow-md ${isNightMode ? 'text-indigo-200' : 'text-cyan-100 sm:text-cyan-600'}`}>
+                            Antalya Tatili 
+                            {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[9px] bg-emerald-500/80 text-white px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Çevrimiçi</span>}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Hava Durumu Widget */}
+                      <div className={`hidden md:flex flex-col items-end text-sm font-bold ${isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600'}`}>
+                          <span><i className="fa-solid fa-location-dot"></i> Antalya</span>
+                          <span className="text-xs font-medium">{isNightMode ? '22°C 🌙 Hafif Esintili' : '26°C ☀️ Güneşli'}</span>
+                      </div>
                   </div>
-                  <div className="flex bg-black/20 p-1 rounded-xl border border-white/10 w-full sm:w-auto">
-                    <button onClick={() => handleTabChange('dashboard')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 active:scale-95 ${activeTab === 'dashboard' ? 'bg-white text-cyan-700 shadow-sm' : 'text-white hover:bg-white/10'}`}>
+                  <div className={`flex p-1.5 rounded-2xl backdrop-blur-md w-full sm:w-auto transition-colors ${isNightMode ? 'bg-black/40 border border-slate-700' : 'bg-black/20 sm:bg-white/50 border border-white/10 sm:border-white'}`}>
+                    <button onClick={() => handleTabChange('dashboard')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 active:scale-95 ${activeTab === 'dashboard' ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-white text-cyan-700 shadow-md') : (isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600 hover:bg-white/20')}`}>
                       <i className="fa-solid fa-map-location-dot"></i> Ana Sayfa
                     </button>
-                    <button onClick={() => handleTabChange('reports')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 rounded-lg font-bold text-sm transition-all duration-300 active:scale-95 ${activeTab === 'reports' ? 'bg-white text-cyan-700 shadow-sm' : 'text-white hover:bg-white/10'}`}>
+                    <button onClick={() => handleTabChange('reports')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 active:scale-95 ${activeTab === 'reports' ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-white text-cyan-700 shadow-md') : (isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600 hover:bg-white/20')}`}>
                       <i className="fa-solid fa-plane-departure"></i> Raporlar
                     </button>
                   </div>
@@ -571,79 +618,99 @@
                     <div className="flex flex-col lg:flex-row gap-6 mb-8">
                         <CountdownTimer />
                         <div className="flex-1 grid grid-cols-2 gap-4">
-                            <div className="bg-white/95 rounded-3xl p-6 shadow-xl border border-slate-100 flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1">
-                                <div className="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-full flex items-center justify-center text-xl mb-2"><i className="fa-solid fa-users"></i></div>
+                            <div className={`rounded-3xl p-6 shadow-xl flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1 ${isNightMode ? 'bg-slate-800/90 border border-slate-700 text-slate-200' : 'bg-white/95 border border-slate-100'}`}>
+                                <div className="w-12 h-12 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center text-xl mb-2"><i className="fa-solid fa-users"></i></div>
                                 <h4 className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Katılımcı Sayısı</h4>
-                                <p className="text-3xl sm:text-4xl font-black text-slate-800">{employees.length}</p>
+                                <p className={`text-3xl sm:text-4xl font-black ${isNightMode ? 'text-white' : 'text-slate-800'}`}>{employees.length}</p>
                             </div>
-                            <div className="bg-white/95 rounded-3xl p-6 shadow-xl border border-slate-100 flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1 relative overflow-hidden">
+                            <div className={`rounded-3xl p-6 shadow-xl flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1 relative overflow-hidden ${isNightMode ? 'bg-slate-800/90 border border-slate-700' : 'bg-white/95 border border-slate-100'}`}>
                                 <i className="fa-solid fa-plane text-7xl text-emerald-500/5 absolute -right-2 -bottom-2 -rotate-45"></i>
-                                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-xl mb-2 relative z-10"><i className="fa-solid fa-champagne-glasses"></i></div>
+                                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xl mb-2 relative z-10"><i className="fa-solid fa-champagne-glasses"></i></div>
                                 <h4 className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 relative z-10">Bileti Kapanlar</h4>
-                                <p className="text-3xl sm:text-4xl font-black text-emerald-600 relative z-10">{totalWinners}</p>
+                                <p className="text-3xl sm:text-4xl font-black text-emerald-500 relative z-10">{totalWinners}</p>
                             </div>
                         </div>
                     </div>
 
+                    {/* Arama ve Filtreleme Barı */}
+                    <div className={`mb-6 p-2 rounded-2xl flex flex-col md:flex-row items-center gap-3 shadow-lg transition-colors ${isNightMode ? 'bg-slate-800/90 border border-slate-700' : 'bg-white/90 backdrop-blur-md border border-white'}`}>
+                        <div className="relative w-full md:w-1/3">
+                            <i className="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
+                            <input 
+                                type="text" 
+                                placeholder="Yolcu Ara..." 
+                                value={searchTerm}
+                                onChange={e=>setSearchTerm(e.target.value)}
+                                className={`w-full pl-10 pr-4 py-3 rounded-xl outline-none font-medium text-sm transition-colors ${isNightMode ? 'bg-slate-900 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 text-slate-700'}`}
+                            />
+                        </div>
+                        <div className="flex-1 w-full overflow-x-auto flex items-center gap-2 pb-1 md:pb-0 custom-scrollbar">
+                            <button onClick={()=>setFilterOffice('All')} className={`px-4 py-2 rounded-xl text-xs font-bold shrink-0 transition-colors ${filterOffice==='All' ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-cyan-600 text-white') : (isNightMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600')}`}>Tüm Ofisler</button>
+                            {uniqueOffices.map(o => (
+                                <button key={o} onClick={()=>setFilterOffice(o)} className={`px-4 py-2 rounded-xl text-xs font-bold shrink-0 transition-colors ${filterOffice===o ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-cyan-600 text-white') : (isNightMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}`}>{o}</button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Ayarlar Paneli (Açılır/Kapanır) */}
-                    <div className="mb-8 bg-white/95 rounded-3xl shadow-xl border border-slate-100 overflow-hidden transition-all">
-                        <button onClick={() => setShowSettings(!showSettings)} className="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-slate-50 transition-colors">
-                            <span className="font-black text-slate-700 text-base sm:text-lg flex items-center gap-3">
-                                <span className="bg-slate-100 p-1.5 rounded-lg text-slate-500"><i className="fa-solid fa-sliders text-sm"></i></span> Kampanya Kuralları & Ayarlar
+                    <div className={`mb-8 rounded-3xl shadow-xl overflow-hidden transition-all ${isNightMode ? 'bg-slate-800/90 border border-slate-700' : 'bg-white/95 border border-slate-100'}`}>
+                        <button onClick={() => setShowSettings(!showSettings)} className="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-black/5 transition-colors">
+                            <span className={`font-black text-base sm:text-lg flex items-center gap-3 ${isNightMode ? 'text-white' : 'text-slate-700'}`}>
+                                <span className={`p-1.5 rounded-lg ${isNightMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500'}`}><i className="fa-solid fa-sliders text-sm"></i></span> Kampanya Kuralları & Ayarlar
                             </span>
                             <i className={`fa-solid fa-chevron-down text-slate-400 transition-transform duration-300 ${showSettings ? 'rotate-180' : ''}`}></i>
                         </button>
                         
                         {showSettings && (
                             <div className="animate-slide-up">
-                                <div className="p-5 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className={`p-5 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6 ${isNightMode ? 'border-slate-700' : 'border-slate-100'}`}>
                                     <div className="space-y-4">
-                                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-1.5">Hedef Tutarları</h4>
+                                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-500/30 pb-1.5">Hedef Tutarları</h4>
                                         <div className="flex gap-3">
                                             <div className="flex-1">
                                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1">ESKİ PERSONEL</label>
                                                 <div className="relative">
-                                                    <input type="text" inputMode="numeric" value={targetOld===0?'':formatInputNumber(targetOld)} onChange={e=>setTargetOld(parseInputNumber(e.target.value))} className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-slate-700 text-sm" />
+                                                    <input type="text" inputMode="numeric" value={targetOld===0?'':formatInputNumber(targetOld)} onChange={e=>setTargetOld(parseInputNumber(e.target.value))} className={`w-full pl-3 pr-8 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode?'bg-slate-900 text-white focus:ring-indigo-500':'bg-slate-50 text-slate-700 focus:ring-cyan-500'}`} />
                                                     <span className="absolute right-3 top-2 text-slate-400 font-bold text-sm">₺</span>
                                                 </div>
                                             </div>
                                             <div className="flex-1">
                                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1">YENİ PERSONEL</label>
                                                 <div className="relative">
-                                                    <input type="text" inputMode="numeric" value={targetNew===0?'':formatInputNumber(targetNew)} onChange={e=>setTargetNew(parseInputNumber(e.target.value))} className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-slate-700 text-sm" />
+                                                    <input type="text" inputMode="numeric" value={targetNew===0?'':formatInputNumber(targetNew)} onChange={e=>setTargetNew(parseInputNumber(e.target.value))} className={`w-full pl-3 pr-8 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode?'bg-slate-900 text-white focus:ring-indigo-500':'bg-slate-50 text-slate-700 focus:ring-cyan-500'}`} />
                                                     <span className="absolute right-3 top-2 text-slate-400 font-bold text-sm">₺</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="pt-1">
-                                            <label className="block text-[10px] font-bold text-amber-500 mb-1">YENİ PERSONEL MİLADI (İPAŞ GİRİŞ)</label>
-                                            <input type="date" value={cutoffDate} onChange={e=>setCutoffDate(e.target.value)} className="w-full px-3 py-2 bg-amber-50 border border-amber-100 rounded-lg text-amber-800 font-bold outline-none text-sm" />
+                                            <label className="block text-[10px] font-bold text-amber-500 mb-1">YENİ PERSONEL MİLADI</label>
+                                            <input type="date" value={cutoffDate} onChange={e=>setCutoffDate(e.target.value)} className={`w-full px-3 py-2 rounded-lg font-bold outline-none text-sm ${isNightMode?'bg-amber-900/30 text-amber-400':'bg-amber-50 text-amber-800'}`} />
                                         </div>
                                     </div>
                                     <div className="space-y-4">
-                                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-1.5">Geçerli Aylar</h4>
+                                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-500/30 pb-1.5">Geçerli Aylar</h4>
                                         <div className="flex flex-wrap gap-1.5">
                                             {months.map(m => (
-                                                <span key={m.id} className="bg-cyan-50 text-cyan-700 px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1.5 border border-cyan-100">
-                                                {m.name} <button onClick={()=>handleRemoveMonth(m.id)} className="text-cyan-400 hover:text-rose-500"><i className="fa-solid fa-circle-xmark"></i></button>
+                                                <span key={m.id} className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1.5 border ${isNightMode?'bg-indigo-900/30 text-indigo-300 border-indigo-700':'bg-cyan-50 text-cyan-700 border-cyan-100'}`}>
+                                                {m.name} <button onClick={()=>handleRemoveMonth(m.id)} className="hover:text-rose-500"><i className="fa-solid fa-circle-xmark"></i></button>
                                                 </span>
                                             ))}
                                         </div>
                                         <div className="flex gap-2">
-                                            <input type="text" value={newMonthName} onChange={e=>setNewMonthName(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleAddMonth()} placeholder="Yeni ay ekle (Örn: Nisan)" className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-sm font-medium" />
-                                            <button onClick={handleAddMonth} className="bg-cyan-600 text-white px-3 rounded-lg font-bold hover:bg-cyan-700 transition-colors"><i className="fa-solid fa-plus"></i></button>
+                                            <input type="text" value={newMonthName} onChange={e=>setNewMonthName(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleAddMonth()} placeholder="Yeni ay ekle" className={`flex-1 px-3 py-2 rounded-lg outline-none text-sm font-medium ${isNightMode?'bg-slate-900 text-white':'bg-slate-50 text-slate-700'}`} />
+                                            <button onClick={handleAddMonth} className={`text-white px-3 rounded-lg font-bold transition-colors ${isNightMode?'bg-indigo-600 hover:bg-indigo-700':'bg-cyan-600 hover:bg-cyan-700'}`}><i className="fa-solid fa-plus"></i></button>
                                         </div>
                                     </div>
                                 </div>
                                 
                                 {/* Ayarlar Kaydet & Temizle Bölümü */}
-                                <div className="p-5 mt-2 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
-                                    <button onClick={() => setIsDeletingAll(true)} className="text-xs font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1.5 transition-colors p-2 rounded-lg hover:bg-rose-50 w-full sm:w-auto justify-center">
+                                <div className={`p-5 mt-2 border-t flex flex-col sm:flex-row justify-between items-center gap-4 ${isNightMode ? 'bg-slate-900/50 border-slate-700' : 'bg-slate-50/50 border-slate-100'}`}>
+                                    <button onClick={() => setIsDeletingAll(true)} className="text-xs font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1.5 transition-colors p-2 rounded-lg hover:bg-rose-50/10 w-full sm:w-auto justify-center">
                                         <i className="fa-solid fa-trash-can"></i> Tüm Personel Verilerini Temizle
                                     </button>
                                     <div className="flex items-center gap-3 w-full sm:w-auto">
                                         {settingsSaved && <span className="text-xs font-bold text-emerald-500 animate-fade-in flex items-center gap-1"><i className="fa-solid fa-circle-check"></i> Kaydedildi!</span>}
-                                        <button onClick={handleSaveSettings} disabled={dbStatus !== 'connected'} className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 ${dbStatus === 'connected' ? 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md shadow-cyan-600/20 active:scale-95' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}>
+                                        <button onClick={handleSaveSettings} disabled={dbStatus !== 'connected'} className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 ${dbStatus === 'connected' ? (isNightMode?'bg-indigo-600 hover:bg-indigo-700 text-white':'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md shadow-cyan-600/20 active:scale-95') : 'bg-slate-600 text-slate-400 cursor-not-allowed'}`}>
                                             <i className="fa-solid fa-cloud-arrow-up"></i> Ayarları Kaydet
                                         </button>
                                     </div>
@@ -654,38 +721,32 @@
 
                     {/* Tablolar ve Liderlik Podyumları */}
                     <div className="space-y-8">
-                      
                       {/* Eski Personel Bölümü */}
-                      <div className="bg-white/95 rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-4 sm:p-5 text-white text-center relative overflow-hidden">
-                            <i className="fa-solid fa-briefcase absolute -left-6 -bottom-6 text-7xl text-white/10 -rotate-12"></i>
+                      <div className={`rounded-[2rem] shadow-xl overflow-hidden ${isNightMode ? 'bg-slate-800 border border-slate-700' : 'bg-white/95 border border-slate-100'}`}>
+                        <div className={`p-4 sm:p-5 text-white text-center relative overflow-hidden ${isNightMode ? 'bg-slate-900' : 'bg-gradient-to-r from-indigo-600 to-blue-600'}`}>
+                            <i className="fa-solid fa-briefcase absolute -left-6 -bottom-6 text-7xl text-white/5 -rotate-12"></i>
                             <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest drop-shadow-sm relative z-10">Eski Personel</h2>
-                            <p className="text-indigo-200 font-medium text-xs mt-0.5 relative z-10">Hedef: {formatTL(targetOld)}</p>
+                            <p className={`${isNightMode?'text-indigo-400':'text-indigo-200'} font-medium text-xs mt-0.5 relative z-10`}>Hedef: {formatTL(targetOld)}</p>
                         </div>
-                        <div className="px-2 sm:px-6 -mt-6 relative z-20">
-                            <Podium data={processedOldData} />
-                        </div>
-                        {dbStatus === 'loading' ? <SkeletonTable /> : <EmployeeTable data={processedOldData} months={months} onEdit={handleEdit} onDelete={handleDeleteClick} type="old" />}
+                        <div className="px-2 sm:px-6 -mt-6 relative z-20"><Podium data={processedOldData} /></div>
+                        {dbStatus === 'loading' ? <SkeletonTable /> : <EmployeeTable data={processedOldData} months={months} onProfileClick={setSelectedProfile} type="old" isNightMode={isNightMode} />}
                       </div>
 
                       {/* Yeni Personel Bölümü */}
-                      <div className="bg-white/95 rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                        <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 sm:p-5 text-white text-center relative overflow-hidden">
-                            <i className="fa-solid fa-star absolute -left-6 -bottom-6 text-7xl text-white/10 -rotate-12"></i>
+                      <div className={`rounded-[2rem] shadow-xl overflow-hidden ${isNightMode ? 'bg-slate-800 border border-slate-700' : 'bg-white/95 border border-slate-100'}`}>
+                        <div className={`p-4 sm:p-5 text-white text-center relative overflow-hidden ${isNightMode ? 'bg-slate-900' : 'bg-gradient-to-r from-amber-500 to-orange-500'}`}>
+                            <i className="fa-solid fa-star absolute -left-6 -bottom-6 text-7xl text-white/5 -rotate-12"></i>
                             <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest drop-shadow-sm relative z-10">Yeni Personel</h2>
-                            <p className="text-amber-100 font-medium text-xs mt-0.5 relative z-10">Hedef: {formatTL(targetNew)}</p>
+                            <p className={`${isNightMode?'text-amber-500':'text-amber-100'} font-medium text-xs mt-0.5 relative z-10`}>Hedef: {formatTL(targetNew)}</p>
                         </div>
-                        <div className="px-2 sm:px-6 -mt-6 relative z-20">
-                            <Podium data={processedNewData} />
-                        </div>
-                        {dbStatus === 'loading' ? <SkeletonTable /> : <EmployeeTable data={processedNewData} months={months} onEdit={handleEdit} onDelete={handleDeleteClick} type="new" />}
+                        <div className="px-2 sm:px-6 -mt-6 relative z-20"><Podium data={processedNewData} /></div>
+                        {dbStatus === 'loading' ? <SkeletonTable /> : <EmployeeTable data={processedNewData} months={months} onProfileClick={setSelectedProfile} type="new" isNightMode={isNightMode} />}
                       </div>
-
                     </div>
 
                     {/* Yüzen Ekleme Butonu (FAB) */}
-                    <button onClick={openAddModal} className="fixed bottom-6 right-6 sm:bottom-10 sm:right-10 w-14 h-14 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full shadow-xl shadow-cyan-500/40 text-white flex items-center justify-center text-xl hover:scale-110 active:scale-95 transition-all z-40 animate-slide-up border border-white">
-                        <i className="fa-solid fa-plus"></i>
+                    <button onClick={openAddModal} className={`fixed bottom-6 right-6 sm:bottom-10 sm:right-10 w-14 h-14 rounded-full shadow-xl text-white flex items-center justify-center text-xl hover:scale-110 active:scale-95 transition-all z-40 animate-slide-up border border-white/20 ${isNightMode ? 'bg-indigo-600 shadow-indigo-900/50' : 'bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/40'}`}>
+                        <i className="fa-solid fa-user-plus"></i>
                     </button>
                   </div>
                 )}
@@ -702,16 +763,16 @@
                       </button>
                     </div>
 
-                    <div className="bg-white p-6 sm:p-10 rounded-[2rem] shadow-xl border border-slate-100 print:shadow-none print:border-none print:p-0 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500"></div>
+                    <div className="bg-white/95 backdrop-blur-md p-6 sm:p-10 rounded-[2rem] shadow-2xl border border-white/50 print:shadow-none print:border-none print:p-0 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500"></div>
                       
                       <div className="text-center mb-10 pb-6 border-b border-dashed border-slate-200">
                         <div className="flex justify-center mb-4 text-amber-500 drop-shadow-md relative inline-block mx-auto">
-                          <i className="fa-solid fa-plane-departure text-5xl text-cyan-600"></i>
+                          <i className="fa-solid fa-plane-departure text-5xl text-rose-500"></i>
                         </div>
                         <h1 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter mb-2">İhlas Pazarlama</h1>
-                        <h2 className="text-lg sm:text-xl font-extrabold text-cyan-600 uppercase tracking-widest mb-3">Antalya Tatili Sonuçları</h2>
-                        <span className="bg-slate-50 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase border border-slate-200">Tarih: {new Date().toLocaleDateString('tr-TR')}</span>
+                        <h2 className="text-lg sm:text-xl font-extrabold text-orange-600 uppercase tracking-widest mb-3">Antalya Tatili Sonuçları</h2>
+                        <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase border border-slate-200">Tarih: {new Date().toLocaleDateString('tr-TR')}</span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
@@ -738,16 +799,108 @@
                 )}
               </div>
 
-              {/* --- FORM MODALI --- */}
+              {/* --- YOLCU DETAY PANELI (PASSENGER DASHBOARD MODAL) --- */}
+              {selectedProfile && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
+                    <div className={`rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-slide-up flex flex-col relative ${isNightMode ? 'bg-slate-800 border border-slate-700 text-white' : 'bg-white border border-slate-100 text-slate-800'}`}>
+                        {/* Bilet Üst Kısmı */}
+                        <div className={`p-6 relative overflow-hidden ${selectedProfile.isWinner ? 'bg-gradient-to-r from-emerald-500 to-teal-600' : (isNightMode ? 'bg-slate-900' : 'bg-gradient-to-r from-cyan-500 to-blue-600')} text-white`}>
+                            <i className="fa-solid fa-plane absolute -right-6 -bottom-6 text-8xl text-white/10 -rotate-45"></i>
+                            <button onClick={()=>setSelectedProfile(null)} className="absolute top-4 right-4 w-8 h-8 bg-black/20 rounded-full flex items-center justify-center hover:bg-black/40 transition-colors"><i className="fa-solid fa-xmark"></i></button>
+                            
+                            <div className="flex items-center gap-4 mb-4 relative z-10">
+                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black shadow-lg border-2 border-white/50 ${getAvatarColor(selectedProfile.name)}`}>
+                                    {getInitials(selectedProfile.name)}
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold uppercase tracking-widest text-white/70">Yolcu Kartı</div>
+                                    <h2 className="text-xl font-black leading-tight">{selectedProfile.name}</h2>
+                                    <p className="text-sm font-medium text-white/80"><i className="fa-solid fa-location-dot text-xs mr-1"></i> {selectedProfile.office}</p>
+                                </div>
+                            </div>
+                            {selectedProfile.isWinner && <div className="absolute top-6 right-16 text-emerald-200 border-2 border-emerald-200 px-2 py-1 rounded text-xs font-black uppercase -rotate-12">ONAYLANDI</div>}
+                        </div>
+
+                        {/* Bilet Detay / İstatistikler */}
+                        <div className="p-6">
+                            {/* Rozetler */}
+                            {selectedProfile.badges && selectedProfile.badges.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-5 pb-5 border-b border-dashed border-slate-200">
+                                    {selectedProfile.badges.map((b,i) => (
+                                        <span key={i} className={`px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1.5 ${b.color}`}>{b.icon} {b.name}</span>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div className={`p-4 rounded-2xl ${isNightMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-1">Hedef</p>
+                                    <p className="text-lg font-black">{formatTL(selectedProfile.target)}</p>
+                                </div>
+                                <div className={`p-4 rounded-2xl ${isNightMode ? 'bg-indigo-900/40 text-indigo-400' : 'bg-cyan-50 text-cyan-600'}`}>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">Net Ciro</p>
+                                    <p className="text-lg font-black">{formatTL(selectedProfile.netRevenue)}</p>
+                                </div>
+                            </div>
+
+                            {/* Bar Chart (Satış Grafiği) */}
+                            {months.length > 0 && (
+                                <div className="mb-6">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-3"><i className="fa-solid fa-chart-column mr-1"></i> Performans Özeti</p>
+                                    <div className="flex items-end gap-2 h-24 pt-4">
+                                        {months.map(m => {
+                                            const val = Number(selectedProfile.sales[m.id]) || 0;
+                                            const maxSalesInMonths = Math.max(...months.map(x => Number(selectedProfile.sales[x.id])||0), 1);
+                                            const heightPct = val > 0 ? Math.max((val / maxSalesInMonths) * 100, 10) : 0;
+                                            return (
+                                                <div key={m.id} className="flex-1 flex flex-col items-center gap-1 group">
+                                                    <div className="w-full relative flex items-end justify-center h-full bg-slate-100 rounded-t-sm overflow-hidden">
+                                                        <div className={`w-full bar-chart-fill rounded-t-sm ${selectedProfile.isWinner ? 'bg-emerald-400' : 'bg-cyan-400'}`} style={{height: `${heightPct}%`}}></div>
+                                                        {val > 0 && <span className="absolute -top-4 text-[8px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">{formatTL(val).split(' ')[0]}</span>}
+                                                    </div>
+                                                    <span className="text-[9px] font-bold opacity-50 uppercase">{m.name.substring(0,3)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {selectedProfile.returns > 0 && <p className="text-[10px] text-rose-500 font-bold mt-2 text-right">İade Toplamı: -{formatTL(selectedProfile.returns)}</p>}
+                                </div>
+                            )}
+
+                            {/* AI Tavsiyesi & Progress */}
+                            <div className={`p-4 rounded-2xl border ${selectedProfile.percentage >= 100 ? 'bg-emerald-50/10 border-emerald-100/20' : 'bg-slate-50/10 border-slate-100/20'}`}>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Uçuş Durumu</span>
+                                    <span className={`text-[12px] font-black ${selectedProfile.percentage >= 100 ? 'text-emerald-500' : 'text-cyan-500'}`}>% {selectedProfile.percentage.toFixed(1)}</span>
+                                </div>
+                                <div className="w-full bg-slate-200/30 rounded-full h-2 relative mb-3">
+                                    <div className={`h-full rounded-full ${selectedProfile.percentage >= 100 ? 'bg-emerald-500' : 'bg-cyan-500'}`} style={{ width: `${Math.min(selectedProfile.percentage, 100)}%` }}></div>
+                                </div>
+                                <p className="text-[11px] font-medium leading-relaxed opacity-80 flex items-start gap-2">
+                                    <i className="fa-solid fa-robot mt-0.5 opacity-50"></i> {getAIAdvice(selectedProfile)}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Aksiyon Butonları */}
+                        <div className={`p-4 border-t flex gap-2 shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                            <button onClick={()=>{ handleDeleteClick(selectedProfile.id); }} className={`flex-1 py-3 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 ${isNightMode ? 'bg-slate-800 text-rose-400 hover:bg-slate-700' : 'bg-white text-rose-500 border border-slate-200 hover:bg-rose-50'}`}><i className="fa-solid fa-trash"></i> Sil</button>
+                            <button onClick={()=>{ handleEdit(selectedProfile); }} className={`flex-[2] py-3 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 text-white shadow-md active:scale-95 ${isNightMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-cyan-600 hover:bg-cyan-700'}`}><i className="fa-solid fa-pen"></i> Bilgileri Güncelle</button>
+                        </div>
+                    </div>
+                </div>
+              )}
+
+              {/* --- YENİ/DÜZENLE FORM MODALI --- */}
               {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
-                    <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh]">
-                        <div className="p-5 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
-                            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                                <div className="bg-cyan-100 text-cyan-600 w-8 h-8 rounded-lg flex items-center justify-center"><i className="fa-solid fa-id-card-clip text-sm"></i></div>
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
+                    <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh] ${isNightMode ? 'bg-slate-800 text-white border border-slate-700' : 'bg-white'}`}>
+                        <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                            <h2 className="text-lg font-black flex items-center gap-2">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isNightMode ? 'bg-indigo-600 text-white' : 'bg-cyan-100 text-cyan-600'}`}><i className="fa-solid fa-id-card-clip text-sm"></i></div>
                                 {editingId ? 'Yolcu Güncelle' : 'Yeni Yolcu Ekle'}
                             </h2>
-                            <button onClick={()=>setIsModalOpen(false)} className="w-8 h-8 bg-white rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 shadow-sm transition-colors"><i className="fa-solid fa-xmark"></i></button>
+                            <button onClick={()=>setIsModalOpen(false)} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${isNightMode ? 'bg-slate-700 hover:bg-rose-900 text-slate-300' : 'bg-white hover:bg-rose-50 text-slate-400'}`}><i className="fa-solid fa-xmark"></i></button>
                         </div>
                         
                         <div className="p-5 overflow-y-auto custom-scrollbar">
@@ -756,26 +909,26 @@
                             <form id="employeeForm" onSubmit={handleFormSubmit} className="space-y-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide ml-1">Ad Soyad</label>
-                                        <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-sm" />
+                                        <label className="block text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wide ml-1">Ad Soyad</label>
+                                        <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-indigo-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 border border-slate-200'}`} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide ml-1">Ofis</label>
-                                        <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-sm" />
+                                        <label className="block text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wide ml-1">Ofis</label>
+                                        <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-indigo-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 border border-slate-200'}`} />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide ml-1">İPAŞ Giriş Tarihi</label>
-                                    <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-sm" />
+                                    <label className="block text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wide ml-1">İPAŞ Giriş Tarihi</label>
+                                    <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-indigo-500 text-slate-300' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 border border-slate-200'}`} />
                                 </div>
                                 
-                                <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-xl">
-                                    <label className="block text-[10px] font-bold text-cyan-600 mb-3 uppercase tracking-widest"><i className="fa-solid fa-chart-line mr-1"></i> Aylık Satış Performansı</label>
+                                <div className={`p-4 rounded-xl ${isNightMode ? 'bg-slate-900/50 border border-slate-700' : 'bg-slate-50/50 border border-slate-100'}`}>
+                                    <label className={`block text-[10px] font-bold mb-3 uppercase tracking-widest ${isNightMode ? 'text-indigo-400' : 'text-cyan-600'}`}><i className="fa-solid fa-chart-line mr-1"></i> Aylık Satış Performansı</label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                         {months.map(m => (
                                             <div key={m.id}>
-                                                <label className="block text-[9px] font-bold text-slate-500 mb-1 ml-1">{m.name} (TL)</label>
-                                                <input type="text" inputMode="numeric" value={formData.sales[m.id]?formatInputNumber(formData.sales[m.id]):''} onChange={e=>handleSalesChange(m.id, e.target.value)} placeholder="0" className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-sm" />
+                                                <label className="block text-[9px] font-bold opacity-60 mb-1 ml-1">{m.name} (TL)</label>
+                                                <input type="text" inputMode="numeric" value={formData.sales[m.id]?formatInputNumber(formData.sales[m.id]):''} onChange={e=>handleSalesChange(m.id, e.target.value)} placeholder="0" className={`w-full px-3 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-800 focus:ring-indigo-500' : 'bg-white focus:ring-2 focus:ring-cyan-500 border border-slate-200'}`} />
                                             </div>
                                         ))}
                                     </div>
@@ -784,14 +937,14 @@
 
                                 <div>
                                     <label className="block text-[10px] font-bold text-rose-500 mb-1 uppercase tracking-wide ml-1">Toplam İade (TL)</label>
-                                    <input name="returns" value={formData.returns?formatInputNumber(formData.returns):''} onChange={handleInputChange} type="text" inputMode="numeric" placeholder="0" className="w-full px-3 py-2.5 bg-rose-50 border border-rose-100 rounded-lg focus:bg-white focus:ring-2 focus:ring-rose-400 outline-none font-black text-rose-700 text-sm" />
+                                    <input name="returns" value={formData.returns?formatInputNumber(formData.returns):''} onChange={handleInputChange} type="text" inputMode="numeric" placeholder="0" className={`w-full px-3 py-2.5 rounded-lg outline-none font-black text-rose-500 text-sm ${isNightMode ? 'bg-rose-900/20 focus:ring-rose-500' : 'bg-rose-50 focus:bg-white focus:ring-2 focus:ring-rose-400 border border-rose-100'}`} />
                                 </div>
                             </form>
                         </div>
 
-                        <div className="p-5 bg-slate-50 border-t border-slate-100 flex gap-2 shrink-0">
-                            <button onClick={()=>setIsModalOpen(false)} className="flex-1 py-2.5 rounded-lg font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-all text-sm">İptal</button>
-                            <button form="employeeForm" type="submit" disabled={months.length===0} className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-md shadow-cyan-500/20 transition-all flex items-center justify-center gap-1.5 text-sm">
+                        <div className={`p-5 border-t flex gap-2 shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                            <button onClick={()=>setIsModalOpen(false)} className={`flex-1 py-2.5 rounded-lg font-bold transition-all text-sm ${isNightMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-600'}`}>İptal</button>
+                            <button form="employeeForm" type="submit" disabled={months.length===0} className={`flex-[2] py-2.5 rounded-lg font-bold text-white transition-all flex items-center justify-center gap-1.5 text-sm active:scale-95 ${months.length===0 ? 'opacity-50 cursor-not-allowed bg-slate-500' : (isNightMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gradient-to-r from-cyan-500 to-blue-600 shadow-md')}`}>
                                 <i className="fa-solid fa-floppy-disk"></i> {editingId ? 'Güncelle' : 'Kaydet'}
                             </button>
                         </div>
@@ -802,15 +955,15 @@
               {/* Silme Onay Modalı */}
               {deletingId && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
-                  <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border border-slate-100">
+                  <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border ${isNightMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100'}`}>
                     <div className="p-6 text-center">
-                      <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100"><i className="fa-solid fa-plane-slash text-2xl text-rose-500"></i></div>
-                      <h3 className="text-lg font-black text-slate-800 mb-1">Uçuşu İptal Et</h3>
-                      <p className="text-slate-500 text-xs font-medium">Bu personeli listeden çıkarmak istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+                      <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100"><i className="fa-solid fa-plane-slash text-2xl text-rose-500"></i></div>
+                      <h3 className="text-lg font-black mb-1">Uçuşu İptal Et</h3>
+                      <p className="opacity-70 text-xs font-medium">Bu personeli listeden çıkarmak istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
                     </div>
-                    <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
-                      <button onClick={() => setDeletingId(null)} className="flex-1 py-2.5 rounded-lg font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-all text-sm">Vazgeç</button>
-                      <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all text-sm">Evet, Sil</button>
+                    <div className={`p-4 border-t flex gap-2 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                      <button onClick={() => setDeletingId(null)} className={`flex-1 py-2.5 rounded-lg font-bold transition-all text-sm ${isNightMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-600'}`}>Vazgeç</button>
+                      <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all text-sm active:scale-95">Evet, Sil</button>
                     </div>
                   </div>
                 </div>
@@ -819,17 +972,17 @@
               {/* Tümünü Temizle Onay Modalı */}
               {isDeletingAll && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
-                  <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border border-slate-100">
+                  <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border ${isNightMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100'}`}>
                     <div className="p-6 text-center">
-                      <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                      <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
                         <i className="fa-solid fa-triangle-exclamation text-2xl text-rose-500"></i>
                       </div>
-                      <h3 className="text-lg font-black text-slate-800 mb-1">Tüm Verileri Temizle</h3>
-                      <p className="text-slate-500 text-xs font-medium leading-relaxed mt-2">Bu işlem <b>TÜM PERSONEL KAYITLARINI</b> kalıcı olarak silecektir. Yeni bir kampanya dönemine geçmek istediğinize emin misiniz?</p>
+                      <h3 className="text-lg font-black mb-1">Tüm Verileri Temizle</h3>
+                      <p className="opacity-70 text-xs font-medium leading-relaxed mt-2">Bu işlem <b>TÜM PERSONEL KAYITLARINI</b> kalıcı olarak silecektir. Yeni bir kampanya dönemine geçmek istediğinize emin misiniz?</p>
                     </div>
-                    <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
-                      <button onClick={() => setIsDeletingAll(false)} className="flex-1 py-2.5 rounded-lg font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-all text-sm">İptal Et</button>
-                      <button onClick={confirmDeleteAll} className="flex-1 py-2.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all text-sm">Evet, Tümünü Sil</button>
+                    <div className={`p-4 border-t flex gap-2 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                      <button onClick={() => setIsDeletingAll(false)} className={`flex-1 py-2.5 rounded-lg font-bold transition-all text-sm ${isNightMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-600'}`}>İptal Et</button>
+                      <button onClick={confirmDeleteAll} className="flex-1 py-2.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all text-sm active:scale-95">Evet, Tümünü Sil</button>
                     </div>
                   </div>
                 </div>
@@ -838,16 +991,16 @@
           );
         }
 
-        // Yardımcı Render Fonksiyonları
-        function EmployeeTable({ data, months, onEdit, onDelete, type }) {
+        // Yardımcı Render Fonksiyonları (Tablo)
+        function EmployeeTable({ data, months, onProfileClick, type, isNightMode }) {
           const isOld = type === 'old';
-          const badgeColor = isOld ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700';
+          const badgeClass = isOld ? (isNightMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-700') : (isNightMode ? 'bg-amber-900/50 text-amber-300' : 'bg-amber-100 text-amber-700');
           const typeLabel = isOld ? 'Eski' : 'Yeni';
 
           return (
-            <div className="overflow-x-auto p-2 sm:p-5 bg-white/50">
+            <div className={`overflow-x-auto p-2 sm:p-5 ${isNightMode ? 'bg-slate-800/50' : 'bg-white/50'}`}>
                 <table className="w-full text-left whitespace-nowrap border-separate border-spacing-y-2">
-                  <thead className="text-[9px] sm:text-[10px] text-slate-400 uppercase">
+                  <thead className={`text-[9px] sm:text-[10px] uppercase ${isNightMode ? 'text-slate-500' : 'text-slate-400'}`}>
                     <tr>
                       <th className="px-3 sm:px-4 py-2 font-black">Personel / Ofis</th>
                       <th className="px-2 sm:px-3 py-2 font-black text-center">Giriş</th>
@@ -857,54 +1010,49 @@
                       <th className="px-2 sm:px-3 py-2 font-black text-right">Hedef / Kalan</th>
                       <th className="px-3 sm:px-4 py-2 font-black w-32 sm:w-40">İlerleme</th>
                       <th className="px-2 sm:px-3 py-2 font-black text-center">Durum</th>
-                      <th className="px-3 sm:px-4 py-2 font-black text-center">İşlem</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.length === 0 ? (
-                      <tr><td colSpan="9" className="py-10 text-center text-slate-400"><i className="fa-solid fa-plane text-3xl mb-2 opacity-20 block"></i>Kayıt bulunmuyor.</td></tr>
+                      <tr><td colSpan="8" className="py-10 text-center opacity-40"><i className="fa-solid fa-plane text-3xl mb-2 block"></i>Kayıt bulunmuyor.</td></tr>
                     ) : data.map((emp) => (
-                      <tr key={emp.id} className={`bg-white shadow-sm hover:shadow-md transition-shadow rounded-xl ${emp.isWinner ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-transparent'}`}>
+                      <tr key={emp.id} onClick={()=>onProfileClick(emp)} className={`cursor-pointer transition-all rounded-xl transform hover:-translate-y-0.5 ${isNightMode ? 'bg-slate-800 hover:bg-slate-700 shadow-md' : 'bg-white shadow-sm hover:shadow-md'} ${emp.isWinner ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-transparent'}`}>
                         <td className="px-3 sm:px-4 py-2.5 rounded-l-xl">
                           <div className="flex items-center gap-2.5">
-                            <div className={`hidden sm:flex w-7 h-7 rounded-full items-center justify-center text-white font-bold text-[9px] ${getAvatarColor(emp.name)}`}>{getInitials(emp.name)}</div>
+                            <div className={`hidden sm:flex w-8 h-8 rounded-full items-center justify-center text-white font-bold text-[10px] shadow-sm ${getAvatarColor(emp.name)}`}>{getInitials(emp.name)}</div>
                             <div>
-                                <div className={`font-black text-[11px] sm:text-xs ${emp.isWinner ? 'text-emerald-600' : 'text-slate-800'}`}>{emp.name}</div>
-                                <div className="text-[9px] font-bold text-slate-400"><i className="fa-solid fa-location-dot text-[7px] mr-1"></i>{emp.office}</div>
+                                <div className={`font-black text-[11px] sm:text-xs flex items-center gap-1.5 ${emp.isWinner ? 'text-emerald-500' : (isNightMode ? 'text-slate-200' : 'text-slate-800')}`}>
+                                    {emp.name} {emp.badges && emp.badges.map((b,i)=><span key={i} title={b.name}>{b.icon}</span>)}
+                                </div>
+                                <div className="text-[9px] font-bold opacity-50 mt-0.5"><i className="fa-solid fa-location-dot text-[7px] mr-1"></i>{emp.office}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-2 sm:px-3 py-2.5 text-center">
-                          <div className="text-[9px] font-bold text-slate-600">{formatDate(emp.entryDate)}</div>
-                          <span className={`inline-block mt-0.5 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase ${badgeColor}`}>{typeLabel}</span>
+                          <div className={`text-[9px] font-bold ${isNightMode ? 'text-slate-400' : 'text-slate-600'}`}>{formatDate(emp.entryDate)}</div>
+                          <span className={`inline-block mt-1 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase ${badgeClass}`}>{typeLabel}</span>
                         </td>
-                        <td className="px-2 sm:px-3 py-2.5 text-right text-[9px] font-bold text-slate-500 space-y-0.5">
+                        <td className="px-2 sm:px-3 py-2.5 text-right text-[9px] font-bold opacity-70 space-y-0.5">
                           {months.length === 0 ? '-' : months.map(m => (
-                              <div key={m.id} className="flex justify-end gap-1.5"><span className="text-slate-300">{m.name.substring(0,3)}:</span><span className="text-slate-700">{formatTL(emp.sales[m.id] || 0)}</span></div>
+                              <div key={m.id} className="flex justify-end gap-1.5"><span className="opacity-50">{m.name.substring(0,3)}:</span><span>{formatTL(emp.sales[m.id] || 0)}</span></div>
                           ))}
                         </td>
                         <td className="px-2 sm:px-3 py-2.5 text-right text-rose-500 font-black text-[10px]">
-                          {emp.returns > 0 ? <span className="bg-rose-50 px-1.5 py-0.5 rounded-md">-{formatTL(emp.returns)}</span> : '-'}
+                          {emp.returns > 0 ? <span className={`${isNightMode ? 'bg-rose-900/30' : 'bg-rose-50'} px-1.5 py-0.5 rounded-md`}>-{formatTL(emp.returns)}</span> : '-'}
                         </td>
-                        <td className="px-2 sm:px-3 py-2.5 text-right font-black text-cyan-600 text-[11px] sm:text-xs">{formatTL(emp.netRevenue)}</td>
+                        <td className={`px-2 sm:px-3 py-2.5 text-right font-black text-[11px] sm:text-xs ${isNightMode ? 'text-indigo-400' : 'text-cyan-600'}`}>{formatTL(emp.netRevenue)}</td>
                         <td className="px-2 sm:px-3 py-2.5 text-right">
-                          <div className="text-[8px] sm:text-[9px] font-bold text-slate-400 border-b border-slate-50 pb-0.5 mb-0.5">H: {formatTL(emp.target)}</div>
-                          <div className="text-[9px] sm:text-[10px] font-black text-slate-700">{formatTL(emp.remaining)}</div>
+                          <div className="text-[8px] sm:text-[9px] font-bold opacity-50 border-b border-slate-500/20 pb-0.5 mb-0.5">H: {formatTL(emp.target)}</div>
+                          <div className={`text-[9px] sm:text-[10px] font-black ${isNightMode ? 'text-slate-300' : 'text-slate-700'}`}>{formatTL(emp.remaining)}</div>
                         </td>
-                        <td className="px-3 sm:px-4 py-2.5">
-                          <div className="flex justify-between items-center mb-1"><span className={`text-[8px] sm:text-[9px] font-black ${emp.percentage >= 100 ? 'text-emerald-600' : 'text-cyan-600'}`}>% {emp.percentage.toFixed(1)}</span></div>
-                          <div className="w-full bg-slate-100 rounded-full h-1.5 sm:h-2 relative overflow-hidden">
-                            <div className={`h-full rounded-full transition-all duration-1000 ${emp.percentage >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : emp.percentage < 30 ? 'bg-rose-400' : 'bg-gradient-to-r from-cyan-400 to-blue-500'}`} style={{ width: `${Math.min(emp.percentage, 100)}%` }}></div>
+                        <td className="px-3 sm:px-4 py-2.5 rounded-r-xl sm:rounded-none">
+                          <div className="flex justify-between items-center mb-1"><span className={`text-[8px] sm:text-[9px] font-black ${emp.percentage >= 100 ? 'text-emerald-500' : (isNightMode ? 'text-indigo-400' : 'text-cyan-600')}`}>% {emp.percentage.toFixed(1)}</span></div>
+                          <div className={`w-full rounded-full h-1.5 sm:h-2 relative overflow-hidden ${isNightMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                            <div className={`h-full rounded-full transition-all duration-1000 ${emp.percentage >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : emp.percentage < 30 ? 'bg-rose-500' : (isNightMode ? 'bg-indigo-500' : 'bg-cyan-500')}`} style={{ width: `${Math.min(emp.percentage, 100)}%` }}></div>
                           </div>
                         </td>
-                        <td className="px-2 sm:px-3 py-2.5 text-center">
-                          {emp.isWinner ? <span className="bg-emerald-100 text-emerald-600 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg text-[8px] sm:text-[9px] font-black"><i className="fa-solid fa-ticket mr-1"></i>BİLET ALDI</span> : <span className="bg-slate-100 text-slate-400 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg text-[8px] sm:text-[9px] font-black">BEKLİYOR</span>}
-                        </td>
-                        <td className="px-3 sm:px-4 py-2.5 text-center rounded-r-xl">
-                          <div className="flex items-center justify-center gap-1 sm:gap-1.5">
-                            <button onClick={()=>onEdit(emp)} className="w-6 h-6 sm:w-7 sm:h-7 bg-slate-50 hover:bg-cyan-50 text-slate-400 hover:text-cyan-600 rounded-md sm:rounded-lg transition-colors"><i className="fa-solid fa-pen text-[9px] sm:text-[10px]"></i></button>
-                            <button onClick={()=>onDelete(emp.id)} className="w-6 h-6 sm:w-7 sm:h-7 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-md sm:rounded-lg transition-colors"><i className="fa-solid fa-trash text-[9px] sm:text-[10px]"></i></button>
-                          </div>
+                        <td className="hidden sm:table-cell px-2 sm:px-3 py-2.5 text-center rounded-r-xl">
+                          {emp.isWinner ? <span className="bg-emerald-500/20 text-emerald-600 px-2 py-1 rounded-lg text-[9px] font-black"><i className="fa-solid fa-ticket mr-1"></i>BİLET ALDI</span> : <span className={`px-2 py-1 rounded-lg text-[9px] font-black ${isNightMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-400'}`}>BEKLİYOR</span>}
                         </td>
                       </tr>
                     ))}
@@ -937,7 +1085,7 @@
                     {data.map((emp, index) => (
                       <tr key={emp.id} className="hover:bg-slate-50/50">
                         <td className="px-4 sm:px-6 py-2.5 sm:py-3 font-bold text-slate-400 text-[10px] sm:text-xs">#{index + 1}</td>
-                        <td className="px-4 sm:px-6 py-2.5 sm:py-3"><div className="font-black text-xs sm:text-sm text-slate-800">{emp.name}</div><div className="text-[9px] sm:text-[10px] font-bold text-slate-400">{emp.office}</div></td>
+                        <td className="px-4 sm:px-6 py-2.5 sm:py-3"><div className="font-black text-xs sm:text-sm text-slate-800 flex items-center gap-1">{emp.name} {emp.badges && emp.badges.map((b,i)=><span key={i} title={b.name}>{b.icon}</span>)}</div><div className="text-[9px] sm:text-[10px] font-bold text-slate-400">{emp.office}</div></td>
                         <td className="px-4 sm:px-6 py-2.5 sm:py-3 text-right font-black text-emerald-600 text-[11px] sm:text-xs">{formatTL(emp.netRevenue)}</td>
                         <td className="px-4 sm:px-6 py-2.5 sm:py-3 text-right"><span className="bg-emerald-100 text-emerald-700 px-2 sm:px-3 py-1 rounded-lg text-[9px] sm:text-[10px] font-black">% {emp.percentage.toFixed(0)}</span></td>
                       </tr>
