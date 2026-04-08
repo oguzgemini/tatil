@@ -99,7 +99,7 @@
     <script type="text/babel" data-type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, query, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const { useState, useMemo, useEffect, useRef } = React;
 
@@ -114,7 +114,11 @@
         };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        
+        // Çevrimdışı destekli Firestore Başlatma
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+        });
         const appId = "tatil-6fcb9"; 
 
         // --- Yardımcı Fonksiyonlar ---
@@ -285,6 +289,7 @@
           // --- ADMIN YETKİLENDİRME STATE'LERİ ---
           const [isAdmin, setIsAdmin] = useState(false);
           const [showAdminLogin, setShowAdminLogin] = useState(false);
+          const [adminEmailInput, setAdminEmailInput] = useState('');
           const [adminPasswordInput, setAdminPasswordInput] = useState('');
           const [adminError, setAdminError] = useState('');
 
@@ -340,10 +345,20 @@
               return [...new Set(offices)].sort();
           }, [employees]);
 
+          // Statik şifre kontrolü için Auth dinleyicisi düzenlendi
           useEffect(() => {
-            const initAuth = async () => { try { await signInAnonymously(auth); } catch(err) { setDbStatus('error'); } };
-            initAuth();
-            const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+            const unsubscribe = onAuthStateChanged(auth, async (u) => {
+              if (u) {
+                setUser(u);
+                setDbStatus('connected');
+              } else {
+                try {
+                  await signInAnonymously(auth);
+                } catch(err) {
+                  setDbStatus('error');
+                }
+              }
+            });
             return () => unsubscribe();
           }, []);
 
@@ -367,7 +382,7 @@
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const data = [];
                 snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
-                data.sort((a, b) => b.dateArchived - a.dateArchived); // Yeniden eskiye sırala
+                data.sort((a, b) => b.dateArchived - a.dateArchived); 
                 setArchives(data);
             }, (err) => console.log("Arşivler çekilemedi", err));
             return () => unsubscribe();
@@ -389,30 +404,34 @@
             return () => unsubscribe();
           }, [user]);
 
-          // --- ADMIN GİRİŞ İŞLEMİ ---
+          // --- ADMIN GİRİŞ İŞLEMİ (Statik E-Posta / Şifre) ---
           const handleAdminLoginSubmit = (e) => {
             e.preventDefault();
-            // Basit Admin Şifresi Koruması
-            if (adminPasswordInput === '190546') {
+            if (adminEmailInput === 'admin@ihlas.com' && adminPasswordInput === '190546') {
                 setIsAdmin(true);
                 setShowAdminLogin(false);
                 setAdminPasswordInput('');
+                setAdminEmailInput('');
                 setAdminError('');
             } else {
-                setAdminError('Hatalı şifre girdiniz.');
+                setAdminError('E-posta veya şifre hatalı.');
             }
+          };
+
+          const handleAdminLogout = () => {
+              setIsAdmin(false);
           };
 
           const handleTabChange = (tabName) => {
             if (activeTab !== tabName) {
-              setFlightKey(Date.now()); // Her tıklamada benzersiz ID vererek animasyonu sıfırlar
+              setFlightKey(Date.now()); 
               playSound('swoosh');
               
               if (flightTimeoutRef.current) clearTimeout(flightTimeoutRef.current);
               flightTimeoutRef.current = setTimeout(() => setFlightKey(0), 2500);
             }
             setActiveTab(tabName); 
-            setSelectedArchive(null); // Arşiv sekmesine geçerken detay görünümünü sıfırla
+            setSelectedArchive(null);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           };
 
@@ -503,10 +522,7 @@
             };
 
             try {
-                // 1. Arşive Ekle
                 await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'archives'), Date.now().toString()), archiveData);
-                
-                // 2. Mevcut Kayıtları Sil
                 const promises = employees.map(emp => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id.toString())));
                 await Promise.all(promises);
                 
@@ -573,10 +589,10 @@
 
           // Tema URL'leri
           const bgImageUrl = (activeTab === 'reports' || (activeTab === 'archives' && selectedArchive))
-            ? "url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?q=80&w=2070&auto=format&fit=crop')" // Raporlar (Gün batımı)
+            ? "url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?q=80&w=2070&auto=format&fit=crop')" 
             : isNightMode 
-                ? "url('https://images.unsplash.com/photo-1534008757030-27299c4371b6?q=80&w=2070&auto=format&fit=crop')" // Gece
-                : "url('https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=2062&auto=format&fit=crop')"; // Gündüz
+                ? "url('https://images.unsplash.com/photo-1534008757030-27299c4371b6?q=80&w=2070&auto=format&fit=crop')" 
+                : "url('https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=2062&auto=format&fit=crop')"; 
 
           const overlayClass = isNightMode 
             ? "bg-slate-900/70 backdrop-blur-[6px]" 
@@ -611,7 +627,7 @@
                                 {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[9px] bg-emerald-500/80 text-white px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span></span>}
                             </p>
                             {/* Admin Mode Toggle */}
-                            <button onClick={() => isAdmin ? setIsAdmin(false) : setShowAdminLogin(true)} className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-colors border ${isAdmin ? 'bg-amber-500/90 text-white border-amber-400 shadow-md' : (isNightMode ? 'bg-slate-800/80 text-slate-400 border-slate-600 hover:text-white' : 'bg-white/60 text-slate-500 border-slate-300 hover:text-slate-800')}`}>
+                            <button onClick={() => isAdmin ? handleAdminLogout() : setShowAdminLogin(true)} className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-colors border ${isAdmin ? 'bg-amber-500/90 text-white border-amber-400 shadow-md' : (isNightMode ? 'bg-slate-800/80 text-slate-400 border-slate-600 hover:text-white' : 'bg-white/60 text-slate-500 border-slate-300 hover:text-slate-800')}`}>
                                 <i className={`fa-solid ${isAdmin ? 'fa-unlock' : 'fa-lock'}`}></i> {isAdmin ? 'Yönetici Çıkış' : 'Admin'}
                             </button>
                           </div>
@@ -824,7 +840,6 @@
                 {activeTab === 'archives' && (
                   <div className="max-w-6xl mx-auto animate-fade-in print:hidden">
                     {!selectedArchive ? (
-                        // Arşiv Listesi Görünümü
                         <>
                         <div className="mb-8 flex justify-between items-center">
                             <h2 className={`text-xl sm:text-2xl font-black uppercase tracking-widest ${isNightMode ? 'text-white' : 'text-slate-800'}`}>
@@ -868,7 +883,6 @@
                         )}
                         </>
                     ) : (
-                        // Arşiv Detay Görünümü (Dondurulmuş Rapor)
                         <div className="max-w-4xl mx-auto animate-fade-in relative">
                             <button onClick={() => setSelectedArchive(null)} className="absolute -top-12 sm:top-6 sm:-left-16 w-10 h-10 bg-slate-800/50 hover:bg-slate-800 text-white rounded-full flex items-center justify-center transition-colors z-20 backdrop-blur-md border border-white/20"><i className="fa-solid fa-arrow-left"></i></button>
                             
@@ -905,7 +919,7 @@
                 )}
               </div>
 
-              {/* --- ADMİN GİRİŞ MODALI --- */}
+              {/* --- ADMİN GİRİŞ MODALI (Statik E-posta / Şifre Destekli) --- */}
               {showAdminLogin && (
                 <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-fade-in print:hidden">
                     <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border ${isNightMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100'}`}>
@@ -918,11 +932,13 @@
                         </div>
                         <form onSubmit={handleAdminLoginSubmit}>
                             <div className="p-6">
-                                <p className="opacity-70 text-xs font-medium leading-relaxed mb-5 text-center">Ayarları değiştirmek ve kişileri düzenlemek için yönetici şifrenizi girin.</p>
+                                <p className="opacity-70 text-xs font-medium leading-relaxed mb-5 text-center">Lütfen yönetici e-posta ve şifrenizi giriniz.</p>
                                 
                                 {adminError && <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs font-bold text-center animate-pulse"><i className="fa-solid fa-circle-xmark mr-1.5"></i> {adminError}</div>}
 
-                                <div>
+                                <div className="space-y-3">
+                                    <input required type="email" placeholder="E-posta Adresi" value={adminEmailInput} onChange={e=>setAdminEmailInput(e.target.value)} className={`w-full px-4 py-3 rounded-xl outline-none font-bold text-center text-sm transition-colors ${isNightMode ? 'bg-slate-900 text-white focus:ring-2 focus:ring-amber-500 border border-slate-700' : 'bg-slate-50 text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-400 border border-slate-200'}`} />
+                                    
                                     <input required type="password" placeholder="Şifre" value={adminPasswordInput} onChange={e=>setAdminPasswordInput(e.target.value)} className={`w-full px-4 py-3 rounded-xl outline-none font-bold text-center tracking-widest text-lg transition-colors ${isNightMode ? 'bg-slate-900 text-white focus:ring-2 focus:ring-amber-500 border border-slate-700' : 'bg-slate-50 text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-400 border border-slate-200'}`} />
                                 </div>
                             </div>
