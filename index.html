@@ -3,26 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>İhlas Pazarlama - Antalya Tatili Takibi</title>
+    <title>İhlas Pazarlama - Antalya Tatili Portalı</title>
     
-    <!-- Tailwind CSS (Tasarım için) -->
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                    }
+                }
+            }
+        }
+    </script>
     
-    <!-- FontAwesome (İkonlar için) -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- React ve ReactDOM -->
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    <!-- Babel (React JSX için) -->
+    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Canvas Confetti (Kutlama Efekti) -->
+    <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
-        /* Uçak Animasyonu için Özel CSS */
+        /* Scrollbar & Genel Ayarlar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        body { -webkit-tap-highlight-color: transparent; }
+        
+        /* Uçak Geçiş Animasyonu */
         @keyframes flightAnimation {
             0% { left: -20%; bottom: 10%; transform: rotate(15deg) scale(0.5); opacity: 0; }
             10% { opacity: 1; }
@@ -35,47 +63,24 @@
             color: #fff; filter: drop-shadow(0 20px 20px rgba(0, 0, 0, 0.4));
         }
 
-        /* Boarding Pass (Uçak Bileti) Tasarımı (Mobil İçin) */
-        .boarding-pass {
-            position: relative; background: #ffffff; border-radius: 16px; overflow: hidden;
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
         }
-        .boarding-pass::before, .boarding-pass::after {
-            content: ''; position: absolute; top: 50%; width: 24px; height: 24px;
-            background: rgba(248, 250, 252, 0.95); /* Arka plana uyması için */
-            border-radius: 50%; transform: translateY(-50%); z-index: 10;
-        }
-        .boarding-pass::before { left: -12px; box-shadow: inset -2px 0 4px rgba(0,0,0,0.06); }
-        .boarding-pass::after { right: -12px; box-shadow: inset 2px 0 4px rgba(0,0,0,0.06); }
-        .ticket-divider {
-            border-top: 2px dashed #cbd5e1; margin: 12px 0; position: relative; opacity: 0.6;
-        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        /* Dalgalı Su Efekti (Progress Bar) */
+        /* Progress Bar Suyu */
         .water-fill {
             background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #06b6d4 100%);
             background-size: 200% 200%;
             animation: gradientMove 3s ease infinite;
         }
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Uçak İkonu Efekti */
-        .progress-plane {
-            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Scrollbar Gizleme/İnceltme */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        body { -webkit-tap-highlight-color: transparent; }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     </style>
 </head>
-<body class="bg-slate-50">
+<body class="bg-slate-50 text-slate-800 antialiased">
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
@@ -94,69 +99,171 @@
             messagingSenderId: "234528583159",
             appId: "1:234528583159:web:4b5dfe518bfa8669b252f2"
         };
-        
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = "tatil-6fcb9"; 
 
-        const formatTL = (amount) => {
-          return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(amount) + ' ₺';
-        };
-
-        // Input kutucuklarında sayıları 1.800.000 şeklinde gösterecek fonksiyonlar
+        // --- Yardımcı Fonksiyonlar ---
+        const formatTL = (amount) => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(amount) + ' ₺';
         const formatInputNumber = (val) => {
           if (val === 0) return '0';
           if (!val) return '';
-          const cleanVal = val.toString().replace(/\D/g, ''); // Sadece rakamları al
-          if (!cleanVal) return '';
-          return new Intl.NumberFormat('tr-TR').format(cleanVal);
+          const cleanVal = val.toString().replace(/\D/g, '');
+          return cleanVal ? new Intl.NumberFormat('tr-TR').format(cleanVal) : '';
         };
-
-        // Arka planda sayısal değer tutmak için noktaları temizleyen fonksiyon
-        const parseInputNumber = (val) => {
-          if (!val) return 0;
-          return Number(val.toString().replace(/\D/g, ''));
-        };
-
+        const parseInputNumber = (val) => val ? Number(val.toString().replace(/\D/g, '')) : 0;
         const formatDate = (dateString) => {
           if (!dateString) return '-';
           const date = new Date(dateString);
-          if (isNaN(date.getTime())) return '-';
-          return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        };
+        const getInitials = (name) => {
+            if (!name) return "?";
+            const words = name.trim().split(' ');
+            if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
+            return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+        };
+        const getAvatarColor = (name) => {
+            const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-purple-500', 'bg-cyan-500', 'bg-indigo-500'];
+            let sum = 0;
+            for(let i=0; i<name.length; i++) sum += name.charCodeAt(i);
+            return colors[sum % colors.length];
         };
 
+        // --- Alt Bileşenler (Components) ---
+
+        // 1. Geri Sayım Sayacı Bileşeni
+        const CountdownTimer = () => {
+            const targetDate = new Date('2026-04-01T00:00:00').getTime();
+            const [timeLeft, setTimeLeft] = useState(targetDate - new Date().getTime());
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    const now = new Date().getTime();
+                    const distance = targetDate - now;
+                    setTimeLeft(distance);
+                    if (distance < 0) clearInterval(interval);
+                }, 1000);
+                return () => clearInterval(interval);
+            }, [targetDate]);
+
+            const isExpired = timeLeft < 0;
+            const days = isExpired ? 0 : Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            const hours = isExpired ? 0 : Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = isExpired ? 0 : Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+            return (
+                <div className="flex flex-col items-center justify-center bg-white/20 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-white/30 text-white w-full md:w-auto">
+                    <h3 className="text-sm font-bold uppercase tracking-widest mb-4 opacity-90"><i className="fa-regular fa-clock"></i> KAMPANYA SÜRESİ</h3>
+                    <div className="flex gap-4 sm:gap-6 text-center">
+                        <div className="flex flex-col"><span className="text-4xl sm:text-5xl font-black drop-shadow-md">{days.toString().padStart(2, '0')}</span><span className="text-[10px] sm:text-xs font-bold opacity-80 mt-1 uppercase tracking-wider">GÜN</span></div>
+                        <div className="text-3xl sm:text-4xl font-black opacity-50 mt-1">:</div>
+                        <div className="flex flex-col"><span className="text-4xl sm:text-5xl font-black drop-shadow-md">{hours.toString().padStart(2, '0')}</span><span className="text-[10px] sm:text-xs font-bold opacity-80 mt-1 uppercase tracking-wider">SAAT</span></div>
+                        <div className="text-3xl sm:text-4xl font-black opacity-50 mt-1">:</div>
+                        <div className="flex flex-col"><span className="text-4xl sm:text-5xl font-black drop-shadow-md">{minutes.toString().padStart(2, '0')}</span><span className="text-[10px] sm:text-xs font-bold opacity-80 mt-1 uppercase tracking-wider">DAKİKA</span></div>
+                    </div>
+                    {isExpired && (
+                        <div className="mt-5 pt-4 border-t border-white/20 w-full text-center animate-fade-in">
+                            <span className="bg-white/20 px-4 py-1.5 rounded-full text-sm font-black tracking-wide drop-shadow-sm">SÜRE DOLDU</span>
+                            <p className="text-xs font-medium mt-3 text-white/90 italic">"Bir sonraki tatilde görüşmek üzere..." 🌴</p>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // 2. Liderlik Podyumu Bileşeni
+        const Podium = ({ data }) => {
+            if (data.length === 0) return null;
+            // En yüksek yüzdeye sahip ilk 3 kişi (Eğer eşitse ciroya göre)
+            const top3 = [...data].sort((a,b) => {
+                if(b.percentage === a.percentage) return b.netRevenue - a.netRevenue;
+                return b.percentage - a.percentage;
+            }).slice(0, 3);
+
+            const renderCard = (emp, rank) => {
+                if(!emp) return <div className="w-1/3 opacity-0"></div>;
+                const isFirst = rank === 1;
+                const colors = {
+                    1: 'from-amber-300 to-yellow-500 border-yellow-200 text-yellow-900',
+                    2: 'from-slate-200 to-slate-400 border-slate-200 text-slate-800',
+                    3: 'from-orange-300 to-orange-500 border-orange-200 text-orange-900'
+                };
+                const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+                const heights = { 1: 'h-48 sm:h-56 z-10 scale-105', 2: 'h-40 sm:h-48', 3: 'h-36 sm:h-44' };
+
+                return (
+                    <div key={emp.id} className={`w-1/3 flex flex-col items-center justify-end transition-transform hover:-translate-y-2 duration-300 ${heights[rank]}`}>
+                        <div className="relative mb-2">
+                            <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white font-black text-lg shadow-lg border-2 border-white ${getAvatarColor(emp.name)}`}>
+                                {getInitials(emp.name)}
+                            </div>
+                            <div className="absolute -top-3 -right-2 text-xl sm:text-2xl drop-shadow-md">{medals[rank]}</div>
+                        </div>
+                        <div className={`w-full bg-gradient-to-b ${colors[rank]} rounded-t-2xl shadow-xl flex flex-col items-center p-2 sm:p-4 text-center h-full border-t border-x relative overflow-hidden`}>
+                            <div className="absolute inset-0 bg-white/20 pattern-dots"></div>
+                            <span className="relative z-10 text-[10px] sm:text-xs font-black uppercase truncate w-full px-1">{emp.name.split(' ')[0]}</span>
+                            <span className="relative z-10 text-xs sm:text-sm font-black mt-1 bg-white/30 px-2 py-0.5 rounded-lg backdrop-blur-sm">% {emp.percentage.toFixed(0)}</span>
+                            {emp.isWinner && <span className="relative z-10 mt-auto text-[8px] sm:text-[10px] font-black bg-white/50 px-2 py-1 rounded-full uppercase"><i className="fa-solid fa-plane"></i> Gidiyor</span>}
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="flex items-end justify-center max-w-lg mx-auto pt-8 pb-4 gap-1 sm:gap-2">
+                    {renderCard(top3[1], 2)}
+                    {renderCard(top3[0], 1)}
+                    {renderCard(top3[2], 3)}
+                </div>
+            );
+        };
+
+        // 3. Skeleton Tablo
+        const SkeletonTable = () => (
+            <div className="space-y-4 p-4">
+                {[1,2,3].map(i => (
+                    <div key={i} className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full skeleton shrink-0"></div>
+                        <div className="flex-1 space-y-2">
+                            <div className="h-4 w-1/3 rounded skeleton"></div>
+                            <div className="h-3 w-1/4 rounded skeleton"></div>
+                        </div>
+                        <div className="w-24 h-6 rounded-full skeleton shrink-0"></div>
+                    </div>
+                ))}
+            </div>
+        );
+
+
+        // --- Ana Uygulama ---
         function App() {
           const [user, setUser] = useState(null);
           const [dbStatus, setDbStatus] = useState('loading'); 
           const [employees, setEmployees] = useState([]); 
 
+          // UI States
           const [activeTab, setActiveTab] = useState('dashboard');
           const [isFlying, setIsFlying] = useState(false);
-          const [months, setMonths] = useState([
-            { id: 'm1', name: 'Ocak' },
-            { id: 'm2', name: 'Şubat' },
-            { id: 'm3', name: 'Mart' }
-          ]);
+          const [isModalOpen, setIsModalOpen] = useState(false); // Yeni form modalı
+
+          // Settings
+          const [months, setMonths] = useState([{ id: 'm1', name: 'Ocak' }, { id: 'm2', name: 'Şubat' }, { id: 'm3', name: 'Mart' }]);
           const [newMonthName, setNewMonthName] = useState('');
           const [targetOld, setTargetOld] = useState(1200000);
           const [targetNew, setTargetNew] = useState(800000);
           const [cutoffDate, setCutoffDate] = useState('2026-01-01');
+          const [showSettings, setShowSettings] = useState(false); // Ayarları gizle/göster
 
+          // Form
           const [formData, setFormData] = useState({ name: '', office: '', entryDate: '', sales: {}, returns: '' });
           const [editingId, setEditingId] = useState(null);
           const [deletingId, setDeletingId] = useState(null);
           const [formError, setFormError] = useState('');
 
           useEffect(() => {
-            const initAuth = async () => {
-              try {
-                await signInAnonymously(auth);
-              } catch(err) {
-                console.error("Yetkilendirme Hatası", err);
-                setDbStatus('error');
-              }
-            };
+            const initAuth = async () => { try { await signInAnonymously(auth); } catch(err) { setDbStatus('error'); } };
             initAuth();
             const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
             return () => unsubscribe();
@@ -164,29 +271,19 @@
 
           useEffect(() => {
             if (!user) return; 
-            setDbStatus('loading');
-            const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
-            const q = query(employeesRef);
-            
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'employees'));
             const unsubscribe = onSnapshot(q, (snapshot) => {
               const data = [];
-              snapshot.forEach(doc => {
-                data.push({ id: doc.id, ...doc.data() });
-              });
+              snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
               setEmployees(data);
               setDbStatus('connected');
-            }, (err) => {
-              console.error("Veri çekme hatası:", err);
-              setDbStatus('error');
-            });
+            }, (err) => setDbStatus('error'));
             return () => unsubscribe();
           }, [user]);
 
-          // Konfeti Tetikleyici
           const fireConfetti = () => {
             if (typeof confetti !== 'undefined') {
-                const duration = 3000;
-                const end = Date.now() + duration;
+                const end = Date.now() + 3000;
                 const frame = () => {
                     confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#2dd4bf', '#f59e0b', '#0ea5e9'] });
                     confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#2dd4bf', '#f59e0b', '#0ea5e9'] });
@@ -198,18 +295,14 @@
 
           const handleTabChange = (tabName) => {
             if (tabName === 'reports' && activeTab !== 'reports') {
-              setIsFlying(true);
-              setTimeout(() => setIsFlying(false), 2500); 
-              setTimeout(() => fireConfetti(), 800); // Uçak geçerken konfetiyi patlat
+              setIsFlying(true); setTimeout(() => setIsFlying(false), 2500); setTimeout(() => fireConfetti(), 800);
             }
-            setActiveTab(tabName);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveTab(tabName); window.scrollTo({ top: 0, behavior: 'smooth' });
           };
 
           const handleAddMonth = () => {
             if (!newMonthName.trim()) return;
-            const newId = 'm' + Date.now();
-            setMonths([...months, { id: newId, name: newMonthName.trim() }]);
+            setMonths([...months, { id: 'm' + Date.now(), name: newMonthName.trim() }]);
             setNewMonthName('');
           };
 
@@ -226,24 +319,30 @@
           };
 
           const processData = (isNewType) => {
-            return employees
-              .filter(emp => isNewEmployee(emp.entryDate) === isNewType)
-              .map(emp => {
+            return employees.filter(emp => isNewEmployee(emp.entryDate) === isNewType).map(emp => {
                 const totalSales = months.reduce((sum, m) => sum + (Number(emp.sales[m.id]) || 0), 0);
                 const netRevenue = totalSales - (Number(emp.returns) || 0);
                 const currentTarget = Number(isNewType ? targetNew : targetOld) || 0;
                 const remaining = currentTarget - netRevenue;
                 let percentage = currentTarget > 0 ? (netRevenue / currentTarget) * 100 : 0;
-                if (isNaN(percentage) || percentage < 0) percentage = 0;
-
-                return {
-                  ...emp, target: currentTarget, netRevenue, remaining: remaining > 0 ? remaining : 0, percentage, isWinner: currentTarget > 0 && netRevenue >= currentTarget
-                };
+                return { ...emp, target: currentTarget, netRevenue, remaining: Math.max(0, remaining), percentage, isWinner: currentTarget > 0 && netRevenue >= currentTarget };
               }).sort((a, b) => b.percentage - a.percentage);
           };
 
           const processedOldData = useMemo(() => processData(false), [employees, targetOld, cutoffDate, months]);
           const processedNewData = useMemo(() => processData(true), [employees, targetNew, cutoffDate, months]);
+          const totalWinners = processedOldData.filter(e => e.isWinner).length + processedNewData.filter(e => e.isWinner).length;
+
+          // --- Form Modalı İşlemleri ---
+          const openAddModal = () => {
+              setFormData({ name: '', office: '', entryDate: '', sales: {}, returns: '' });
+              setEditingId(null); setFormError(''); setIsModalOpen(true);
+          };
+          
+          const handleEdit = (employee) => {
+            setFormData({ name: employee.name, office: employee.office, entryDate: employee.entryDate || '', sales: { ...employee.sales }, returns: employee.returns || '' });
+            setEditingId(employee.id); setFormError(''); setIsModalOpen(true);
+          };
 
           const handleInputChange = (e) => {
             const { name, value } = e.target;
@@ -262,400 +361,311 @@
             }));
           };
 
-          const handleEdit = (employee) => {
-            setFormData({
-              name: employee.name, office: employee.office, entryDate: employee.entryDate || '',
-              sales: { ...employee.sales }, returns: employee.returns || ''
-            });
-            setEditingId(employee.id);
-            setFormError('');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          };
-
-          const handleCancelEdit = () => {
-            setFormData({ name: '', office: '', entryDate: '', sales: {}, returns: '' });
-            setEditingId(null);
-            setFormError('');
-          };
-
           const handleFormSubmit = async (e) => {
             e.preventDefault();
             if (!formData.name || !formData.office || !formData.entryDate) {
-              setFormError("Lütfen personel adı, ofis ve İPAŞ giriş tarihi bilgilerini eksiksiz doldurunuz.");
-              setTimeout(() => setFormError(''), 4000);
-              return;
+              setFormError("Lütfen isim, ofis ve giriş tarihini doldurunuz.");
+              setTimeout(() => setFormError(''), 4000); return;
             }
 
             const cleanSales = {};
             months.forEach(m => { cleanSales[m.id] = Number(formData.sales[m.id]) || 0; });
+            const payload = { office: formData.office.toUpperCase(), name: formData.name.toUpperCase(), entryDate: formData.entryDate, sales: cleanSales, returns: Number(formData.returns) || 0 };
 
-            const payload = {
-              office: formData.office.toUpperCase(), 
-              name: formData.name.toUpperCase(), 
-              entryDate: formData.entryDate,
-              sales: cleanSales, 
-              returns: Number(formData.returns) || 0,
-            };
-
-            const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
             try {
-              if (editingId) {
-                await setDoc(doc(employeesRef, editingId.toString()), payload);
-              } else {
-                const newId = Date.now().toString();
-                await setDoc(doc(employeesRef, newId), payload);
-                // Yeni kayıt hedefe ulaşmışsa ufak bir konfeti patlat
+              const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
+              if (editingId) { await setDoc(doc(employeesRef, editingId.toString()), payload); } 
+              else {
+                await setDoc(doc(employeesRef, Date.now().toString()), payload);
                 const tempNet = Object.values(cleanSales).reduce((a,b)=>a+b,0) - (Number(formData.returns)||0);
-                const tempTarget = isNewEmployee(formData.entryDate) ? targetNew : targetOld;
-                if(tempTarget > 0 && tempNet >= tempTarget) setTimeout(()=>fireConfetti(), 300);
+                if((isNewEmployee(formData.entryDate) ? targetNew : targetOld) > 0 && tempNet >= (isNewEmployee(formData.entryDate) ? targetNew : targetOld)) setTimeout(()=>fireConfetti(), 300);
               }
-            } catch (err) {
-              setFormError("Veri kaydedilirken hata oluştu. Lütfen bağlantınızı kontrol edin.");
-            }
-
-            setEditingId(null);
-            setFormData({ name: '', office: '', entryDate: '', sales: {}, returns: '' });
-            setFormError('');
+              setIsModalOpen(false);
+            } catch (err) { setFormError("Bağlantı hatası oluştu."); }
           };
 
           const handleDeleteClick = (id) => setDeletingId(id);
 
           const confirmDelete = async () => {
             if (deletingId) {
-              const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
-              try { await deleteDoc(doc(employeesRef, deletingId.toString())); } catch (err) {}
+              try { await deleteDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), deletingId.toString())); } catch (err) {}
               setDeletingId(null);
             }
           };
 
-          const totalWinners = processedOldData.filter(e => e.isWinner).length + processedNewData.filter(e => e.isWinner).length;
-
-          const generateWhatsAppText = () => {
-            let text = `✈️🌴 *İHLAS PAZARLAMA - ANTALYA TATİLİ RAPORU* 🌴✈️\n\n`;
-            text += `📊 *Genel Özet*\n👥 Toplam Personel: ${employees.length}\n🍹 Tatili Kazanan: ${totalWinners}\n\n`;
-
-            const oldWinners = processedOldData.filter(e => e.isWinner);
-            if (oldWinners.length > 0) {
-              text += `🌟 *ESKİ PERSONEL KAZANANLAR*\n`;
-              oldWinners.forEach((e, i) => { text += `${i + 1}. ${e.name} (${e.office}) - %${e.percentage.toFixed(0)}\n`; });
-              text += `\n`;
-            }
-
-            const newWinners = processedNewData.filter(e => e.isWinner);
-            if (newWinners.length > 0) {
-              text += `🌟 *YENİ PERSONEL KAZANANLAR*\n`;
-              newWinners.forEach((e, i) => { text += `${i + 1}. ${e.name} (${e.office}) - %${e.percentage.toFixed(0)}\n`; });
-              text += `\n`;
-            }
-            return text;
-          };
-
-          const handleWhatsAppShare = () => {
-            const text = generateWhatsAppText();
-            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-          };
-
-          const handlePrintPDF = () => window.print();
-
-          // Arka planı duruma göre dinamik yapıyoruz (Dashboard: Deniz, Raporlar: Gün batımı)
+          // --- Ana Görünüm Render ---
           const bgImageUrl = activeTab === 'dashboard' 
             ? "url('https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=2062&auto=format&fit=crop')" 
             : "url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?q=80&w=2070&auto=format&fit=crop')";
 
           return (
-            <div 
-              className="min-h-screen print:bg-white text-slate-800 font-sans pb-24 relative bg-cover bg-center bg-fixed transition-all duration-1000"
-              style={{ backgroundImage: bgImageUrl }}
-            >
-              {/* Arka plan overlay */}
-              <div className="absolute inset-0 bg-white/70 backdrop-blur-sm -z-10 print:hidden transition-all duration-1000"></div>
+            <div className="min-h-screen print:bg-white text-slate-800 font-sans pb-24 relative bg-cover bg-center bg-fixed transition-all duration-1000" style={{ backgroundImage: bgImageUrl }}>
+              <div className="absolute inset-0 bg-gradient-to-b from-cyan-900/40 to-slate-900/60 backdrop-blur-[4px] -z-10 print:hidden transition-all duration-1000"></div>
               
-              {isFlying && (
-                <div className="airplane-flyby">
-                  <i className="fa-solid fa-plane text-6xl sm:text-8xl drop-shadow-xl"></i>
-                </div>
-              )}
+              {isFlying && <div className="airplane-flyby"><i className="fa-solid fa-plane text-6xl sm:text-8xl drop-shadow-xl"></i></div>}
 
-              {/* Üst Navigasyon Mobil Uyumu */}
-              <div className="bg-white/80 backdrop-blur-xl border-b border-cyan-100 sticky top-0 z-40 print:hidden shadow-md shadow-cyan-900/5">
-                <div className="max-w-7xl mx-auto px-4 md:px-8 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
-                  
-                  {/* Logo ve Başlık */}
-                  <div className="flex items-center justify-between w-full sm:w-auto gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-cyan-400 to-blue-500 p-2 sm:p-2.5 rounded-xl text-white shadow-lg shadow-cyan-500/30">
-                          <i className="fa-solid fa-umbrella-beach text-lg sm:text-xl"></i>
-                        </div>
-                        <div>
-                          <h1 className="text-lg sm:text-xl font-extrabold text-cyan-900 leading-tight tracking-tight">İhlas Pazarlama</h1>
-                          <p className="text-[10px] sm:text-xs font-bold text-cyan-600/80 flex items-center gap-1 sm:gap-2 uppercase tracking-widest">
-                            Antalya Tatili 
-                            {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold ml-2"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Çevrimiçi</span>}
-                            {dbStatus === 'loading' && <span className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold ml-2"><i className="fa-solid fa-spinner fa-spin"></i> Bağlanıyor</span>}
-                            {dbStatus === 'error' && <span className="flex items-center gap-1 text-[9px] sm:text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold ml-2"><i className="fa-solid fa-circle-xmark"></i> Hata</span>}
-                          </p>
-                        </div>
+              {/* Üst Navigasyon */}
+              <div className="bg-white/10 backdrop-blur-xl border-b border-white/20 sticky top-0 z-40 print:hidden shadow-lg shadow-black/10">
+                <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gradient-to-br from-cyan-400 to-blue-600 p-2.5 rounded-2xl text-white shadow-lg">
+                      <i className="fa-solid fa-umbrella-beach text-xl"></i>
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-extrabold text-white leading-tight tracking-tight drop-shadow-md">İhlas Pazarlama</h1>
+                      <p className="text-xs font-bold text-cyan-100 flex items-center gap-2 uppercase tracking-widest drop-shadow-md">
+                        Antalya Tatili 
+                        {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[9px] bg-emerald-500/80 text-white px-2 py-0.5 rounded-full backdrop-blur-sm"><span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Çevrimiçi</span>}
+                        {dbStatus === 'loading' && <span className="flex items-center gap-1 text-[9px] bg-amber-500/80 text-white px-2 py-0.5 rounded-full"><i className="fa-solid fa-spinner fa-spin"></i> Bağlanıyor</span>}
+                        {dbStatus === 'error' && <span className="flex items-center gap-1 text-[9px] bg-rose-500/80 text-white px-2 py-0.5 rounded-full"><i className="fa-solid fa-triangle-exclamation"></i> Hata</span>}
+                      </p>
                     </div>
                   </div>
-                  
-                  {/* Menü Butonları */}
-                  <div className="flex w-full sm:w-auto bg-cyan-100/50 p-1.5 rounded-xl">
-                    <button onClick={() => handleTabChange('dashboard')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 active:scale-95 ${activeTab === 'dashboard' ? 'bg-white text-cyan-600 shadow-md ring-1 ring-black/5' : 'text-cyan-700/70 hover:text-cyan-900'}`}>
-                      <i className="fa-solid fa-map-location-dot"></i> <span className="hidden xs:inline">Ana Sayfa</span>
+                  <div className="flex bg-black/20 p-1.5 rounded-2xl backdrop-blur-md border border-white/10 w-full sm:w-auto">
+                    <button onClick={() => handleTabChange('dashboard')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 active:scale-95 ${activeTab === 'dashboard' ? 'bg-white text-cyan-700 shadow-md' : 'text-white hover:bg-white/10'}`}>
+                      <i className="fa-solid fa-map-location-dot"></i> Ana Sayfa
                     </button>
-                    <button onClick={() => handleTabChange('reports')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300 active:scale-95 ${activeTab === 'reports' ? 'bg-white text-cyan-600 shadow-md ring-1 ring-black/5' : 'text-cyan-700/70 hover:text-cyan-900'}`}>
-                      <i className="fa-solid fa-plane-departure"></i> <span className="hidden xs:inline">Raporlar</span>
+                    <button onClick={() => handleTabChange('reports')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 active:scale-95 ${activeTab === 'reports' ? 'bg-white text-cyan-700 shadow-md' : 'text-white hover:bg-white/10'}`}>
+                      <i className="fa-solid fa-plane-departure"></i> Raporlar
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 sm:p-4 md:p-8">
+              <div className="p-4 md:p-8 animate-fade-in">
                 {activeTab === 'dashboard' && (
                   <div className="max-w-7xl mx-auto print:hidden">
                     
-                    {/* Üst İstatistik Kartları */}
-                    <div className="grid grid-cols-2 md:flex md:flex-wrap gap-3 sm:gap-4 mb-6">
-                      <div className="bg-white/90 backdrop-blur-sm px-4 sm:px-6 py-4 rounded-3xl shadow-xl shadow-cyan-900/5 border border-white/60 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-[140px] sm:min-w-[220px] transition-transform hover:-translate-y-1 duration-300">
-                        <div className="p-3 sm:p-4 bg-cyan-50 text-cyan-500 rounded-2xl w-fit">
-                          <i className="fa-solid fa-umbrella-beach text-xl sm:text-2xl"></i>
+                    {/* Hero Bölümü (Geri Sayım + Özet) */}
+                    <div className="flex flex-col lg:flex-row gap-6 mb-8">
+                        <CountdownTimer />
+                        <div className="flex-1 grid grid-cols-2 gap-4">
+                            <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1">
+                                <div className="w-14 h-14 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center text-2xl mb-3"><i className="fa-solid fa-users"></i></div>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Katılımcı Sayısı</h4>
+                                <p className="text-4xl font-black text-slate-800">{employees.length}</p>
+                            </div>
+                            <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 shadow-xl border border-white flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1 relative overflow-hidden">
+                                <i className="fa-solid fa-plane text-8xl text-emerald-500/5 absolute -right-4 -bottom-4 -rotate-45"></i>
+                                <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-2xl mb-3 relative z-10"><i className="fa-solid fa-champagne-glasses"></i></div>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1 relative z-10">Bileti Kapanlar</h4>
+                                <p className="text-4xl font-black text-emerald-600 relative z-10">{totalWinners}</p>
+                            </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] sm:text-xs text-cyan-600/70 font-bold uppercase tracking-widest mb-0.5">Toplam Personel</p>
-                          <p className="text-2xl sm:text-3xl font-black text-cyan-900">{employees.length}</p>
-                        </div>
-                      </div>
-                      <div className="bg-white/90 backdrop-blur-sm px-4 sm:px-6 py-4 rounded-3xl shadow-xl shadow-emerald-900/5 border border-white/60 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-[140px] sm:min-w-[220px] transition-transform hover:-translate-y-1 duration-300">
-                        <div className="p-3 sm:p-4 bg-emerald-50 text-emerald-500 rounded-2xl w-fit">
-                          <i className="fa-solid fa-champagne-glasses text-xl sm:text-2xl"></i>
-                        </div>
-                        <div>
-                          <p className="text-[10px] sm:text-xs text-emerald-600/70 font-bold uppercase tracking-widest mb-0.5">Tatili Kazanan</p>
-                          <p className="text-2xl sm:text-3xl font-black text-emerald-900">{totalWinners}</p>
-                        </div>
-                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-                      {/* Sol Panel: Ayarlar */}
-                      <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-6 rounded-[2rem] shadow-xl shadow-cyan-900/5 border border-white lg:col-span-1 flex flex-col gap-5">
+                    {/* Ayarlar Paneli (Açılır/Kapanır) */}
+                    <div className="mb-8 bg-white/90 backdrop-blur-md rounded-3xl shadow-xl border border-white overflow-hidden transition-all">
+                        <button onClick={() => setShowSettings(!showSettings)} className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50/50 transition-colors">
+                            <span className="font-black text-slate-800 text-lg flex items-center gap-3">
+                                <span className="bg-slate-100 p-2 rounded-xl text-slate-500"><i className="fa-solid fa-sliders"></i></span> Kampanya Kuralları & Ayarlar
+                            </span>
+                            <i className={`fa-solid fa-chevron-down text-slate-400 transition-transform duration-300 ${showSettings ? 'rotate-180' : ''}`}></i>
+                        </button>
                         
-                        <div>
-                          <h2 className="text-base sm:text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-                            <div className="bg-cyan-100 text-cyan-600 w-8 h-8 rounded-xl flex items-center justify-center"><i className="fa-solid fa-suitcase-rolling text-sm"></i></div> 
-                            Kampanya Ayarları
-                          </h2>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide">Eski Personel Hedefi</label>
-                              <div className="relative">
-                                <input type="text" inputMode="numeric" pattern="[0-9\.]*" value={targetOld === 0 ? '' : formatInputNumber(targetOld)} onChange={(e) => setTargetOld(parseInputNumber(e.target.value))} className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none transition-all font-bold text-sm text-slate-700" />
-                                <span className="absolute right-4 top-3 text-slate-400 font-bold">₺</span>
-                              </div>
+                        {showSettings && (
+                            <div className="p-6 pt-0 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8 animate-slide-up">
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-2">Hedef Tutarları</h4>
+                                    <div className="flex gap-4">
+                                        <div className="flex-1">
+                                            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">ESKİ PERSONEL</label>
+                                            <div className="relative">
+                                                <input type="text" inputMode="numeric" value={targetOld===0?'':formatInputNumber(targetOld)} onChange={e=>setTargetOld(parseInputNumber(e.target.value))} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-slate-700" />
+                                                <span className="absolute right-4 top-2.5 text-slate-400 font-bold">₺</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">YENİ PERSONEL</label>
+                                            <div className="relative">
+                                                <input type="text" inputMode="numeric" value={targetNew===0?'':formatInputNumber(targetNew)} onChange={e=>setTargetNew(parseInputNumber(e.target.value))} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-slate-700" />
+                                                <span className="absolute right-4 top-2.5 text-slate-400 font-bold">₺</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="pt-2">
+                                        <label className="block text-[11px] font-bold text-amber-500 mb-1">YENİ PERSONEL MİLADI (İPAŞ GİRİŞ)</label>
+                                        <input type="date" value={cutoffDate} onChange={e=>setCutoffDate(e.target.value)} className="w-full px-4 py-2.5 bg-amber-50 border border-amber-100 rounded-xl text-amber-800 font-bold outline-none" />
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-2">Geçerli Aylar</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {months.map(m => (
+                                            <span key={m.id} className="bg-cyan-50 text-cyan-700 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border border-cyan-100">
+                                            {m.name} <button onClick={()=>handleRemoveMonth(m.id)} className="text-cyan-400 hover:text-rose-500"><i className="fa-solid fa-circle-xmark"></i></button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input type="text" value={newMonthName} onChange={e=>setNewMonthName(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleAddMonth()} placeholder="Yeni ay ekle (Örn: Nisan)" className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-medium" />
+                                        <button onClick={handleAddMonth} className="bg-cyan-600 text-white px-4 rounded-xl font-bold hover:bg-cyan-700 transition-colors"><i className="fa-solid fa-plus"></i></button>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                              <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide">Yeni Personel Hedefi</label>
-                              <div className="relative">
-                                <input type="text" inputMode="numeric" pattern="[0-9\.]*" value={targetNew === 0 ? '' : formatInputNumber(targetNew)} onChange={(e) => setTargetNew(parseInputNumber(e.target.value))} className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none transition-all font-bold text-sm text-slate-700" />
-                                <span className="absolute right-4 top-3 text-slate-400 font-bold">₺</span>
-                              </div>
-                            </div>
-                            <div className="pt-4 border-t border-slate-100">
-                              <label className="block text-[11px] font-bold text-amber-500 mb-1 flex items-center gap-1.5 uppercase tracking-wide">
-                                <i className="fa-solid fa-calendar-days"></i> Yeni Personel Miladı
-                              </label>
-                              <p className="text-[10px] text-slate-400 mb-2 ml-1 leading-tight">Bu tarih ve sonrasında işe girenler otomatik "Yeni" sayılır.</p>
-                              <input type="date" value={cutoffDate} onChange={(e) => setCutoffDate(e.target.value)} className="w-full px-4 py-3 bg-amber-50/50 border border-amber-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-amber-500/20 focus:border-amber-400 outline-none transition-all font-bold text-sm text-amber-800" />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Dinamik Aylar Yönetimi */}
-                        <div className="pt-4 border-t border-slate-100">
-                          <label className="block text-[11px] font-bold text-cyan-600 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
-                            <i className="fa-regular fa-calendar-check"></i> Aktif Aylar
-                          </label>
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {months.map(m => (
-                              <span key={m.id} className="bg-cyan-50 text-cyan-700 px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-2 border border-cyan-100 shadow-sm">
-                                {m.name}
-                                <button type="button" onClick={() => handleRemoveMonth(m.id)} className="text-cyan-400 hover:text-rose-500 hover:bg-rose-50 bg-white rounded-full w-5 h-5 flex items-center justify-center transition-colors">
-                                  <i className="fa-solid fa-xmark text-[10px]"></i>
-                                </button>
-                              </span>
-                            ))}
-                            {months.length === 0 && <span className="text-[10px] text-rose-500 font-bold bg-rose-50 px-3 py-1.5 rounded-xl">Lütfen en az bir ay ekleyin!</span>}
-                          </div>
-                          <div className="flex gap-2">
-                            <input 
-                              type="text" 
-                              value={newMonthName} 
-                              onChange={e => setNewMonthName(e.target.value)} 
-                              onKeyPress={e => e.key === 'Enter' && handleAddMonth()}
-                              placeholder="Örn: Nisan" 
-                              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-400 outline-none text-sm font-medium transition-all" 
-                            />
-                            <button onClick={handleAddMonth} className="bg-cyan-500 text-white w-12 h-11 flex items-center justify-center rounded-2xl hover:bg-cyan-600 font-bold shadow-lg shadow-cyan-500/30 active:scale-95 transition-all">
-                              <i className="fa-solid fa-plus"></i>
-                            </button>
-                          </div>
-                        </div>
-
-                      </div>
-
-                      {/* Sağ Panel: Form */}
-                      <div className="bg-white/95 backdrop-blur-sm p-4 sm:p-6 rounded-[2rem] shadow-xl shadow-cyan-900/5 border border-white lg:col-span-3 relative overflow-hidden transition-all duration-500">
-                        {editingId && <div className="absolute top-0 left-0 w-full h-1.5 bg-amber-400 animate-pulse"></div>}
-                        <h2 className={`text-base sm:text-lg font-black mb-5 flex items-center gap-2 ${editingId ? 'text-amber-500' : 'text-slate-800'}`}>
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${editingId ? 'bg-amber-100 text-amber-500' : 'bg-emerald-100 text-emerald-500'}`}>
-                             {editingId ? <i className="fa-solid fa-pen text-sm"></i> : <i className="fa-solid fa-user-plus text-sm"></i>}
-                          </div>
-                          {editingId ? 'Personel Bilgilerini Düzenle' : 'Yeni Personel / Veri Girişi'}
-                        </h2>
-                        
-                        {formError && (
-                          <div className="mb-5 p-3 sm:p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl flex items-center gap-3 text-xs sm:text-sm font-bold animate-pulse shadow-sm">
-                            <i className="fa-solid fa-circle-exclamation text-lg shrink-0"></i> {formError}
-                          </div>
                         )}
+                    </div>
 
-                        <form onSubmit={handleFormSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-3 sm:gap-4">
-                          <div className="sm:col-span-2 md:col-span-4">
-                            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide">Ad Soyad</label>
-                            <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Yolcu Adı" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none font-bold text-sm text-slate-800 transition-all" />
-                          </div>
-                          <div className="sm:col-span-1 md:col-span-4">
-                            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide">Ofis</label>
-                            <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Kalkış Noktası" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none font-bold text-sm text-slate-800 transition-all" />
-                          </div>
-                          <div className="sm:col-span-1 md:col-span-4">
-                            <label className="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1 uppercase tracking-wide flex items-center gap-1.5"><i className="fa-solid fa-calendar-days"></i> İPAŞ Giriş Tarihi</label>
-                            <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none font-bold text-sm text-slate-800 transition-all" />
-                          </div>
-                          
-                          {/* Dinamik Satış Giriş Alanları */}
-                          <div className="sm:col-span-2 md:col-span-12 mt-2 pt-4 border-t border-slate-100">
-                             <label className="block text-[11px] font-bold text-cyan-600/70 mb-3 ml-1 uppercase tracking-widest">Aylık Satış Performansı (TL)</label>
-                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                               {months.map(m => (
-                                 <div key={m.id}>
-                                   <label className="block text-[10px] sm:text-[11px] font-bold text-slate-500 mb-1 ml-1">{m.name} Satış</label>
-                                   <input 
-                                     type="text" 
-                                     inputMode="numeric"
-                                     pattern="[0-9\.]*"
-                                     value={formData.sales[m.id] ? formatInputNumber(formData.sales[m.id]) : ''} 
-                                     onChange={(e) => handleSalesChange(m.id, e.target.value)} 
-                                     placeholder="0" 
-                                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-cyan-500/20 focus:border-cyan-500 outline-none font-bold text-sm text-slate-700 transition-all" 
-                                   />
-                                 </div>
-                               ))}
-                               {months.length === 0 && <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-2xl col-span-2 border border-slate-100">Ayları sol panelden ekleyin.</p>}
-                             </div>
-                          </div>
-
-                          <div className="sm:col-span-2 md:col-span-12 border-t border-slate-100 pt-4 mt-2 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-                            <div className="w-full sm:w-1/3 md:w-1/4">
-                              <label className="block text-[11px] font-bold text-rose-500 mb-1.5 ml-1 uppercase tracking-wide">Toplam İade (TL)</label>
-                              <input name="returns" value={formData.returns ? formatInputNumber(formData.returns) : ''} onChange={handleInputChange} type="text" inputMode="numeric" pattern="[0-9\.]*" placeholder="0" className="w-full px-4 py-3 bg-rose-50/50 border border-rose-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-rose-500/20 focus:border-rose-400 outline-none text-rose-700 font-black text-sm transition-all" />
-                            </div>
-                            <div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0">
-                              {editingId && (
-                                <button type="button" onClick={handleCancelEdit} className="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-600 px-5 sm:px-6 py-3.5 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2">
-                                  İptal
-                                </button>
-                              )}
-                              <button type="submit" disabled={months.length === 0 || dbStatus === 'error'} className={`flex-1 sm:flex-none text-white px-5 sm:px-8 py-3.5 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-xl ${(months.length === 0 || dbStatus === 'error') ? 'bg-slate-300 shadow-none cursor-not-allowed' : (editingId ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30' : 'bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 shadow-cyan-500/30')}`}>
-                                {editingId ? <i className="fa-solid fa-pen-to-square"></i> : <i className="fa-solid fa-plane-up"></i>}
-                                {editingId ? 'Güncelle' : 'Yolcu Ekle'}
-                              </button>
-                            </div>
-                          </div>
-                        </form>
+                    {/* Tablolar ve Liderlik Podyumları */}
+                    <div className="space-y-10">
+                      
+                      {/* Eski Personel Bölümü */}
+                      <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white overflow-hidden">
+                        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-6 sm:p-8 text-white text-center relative overflow-hidden">
+                            <i className="fa-solid fa-briefcase absolute -left-10 -bottom-10 text-9xl text-white/10 -rotate-12"></i>
+                            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest drop-shadow-md relative z-10">Eski Personel Ligi</h2>
+                            <p className="text-indigo-200 font-medium text-sm mt-1 relative z-10">Hedef: {formatTL(targetOld)}</p>
+                        </div>
+                        <div className="px-2 sm:px-6 -mt-10 relative z-20">
+                            <Podium data={processedOldData} />
+                        </div>
+                        {dbStatus === 'loading' ? <SkeletonTable /> : <EmployeeTable data={processedOldData} months={months} onEdit={handleEdit} onDelete={handleDeleteClick} type="old" />}
                       </div>
+
+                      {/* Yeni Personel Bölümü */}
+                      <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white overflow-hidden">
+                        <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 sm:p-8 text-white text-center relative overflow-hidden">
+                            <i className="fa-solid fa-star absolute -left-10 -bottom-10 text-9xl text-white/10 -rotate-12"></i>
+                            <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-widest drop-shadow-md relative z-10">Yeni Personel Ligi</h2>
+                            <p className="text-amber-100 font-medium text-sm mt-1 relative z-10">Hedef: {formatTL(targetNew)}</p>
+                        </div>
+                        <div className="px-2 sm:px-6 -mt-10 relative z-20">
+                            <Podium data={processedNewData} />
+                        </div>
+                        {dbStatus === 'loading' ? <SkeletonTable /> : <EmployeeTable data={processedNewData} months={months} onEdit={handleEdit} onDelete={handleDeleteClick} type="new" />}
+                      </div>
+
                     </div>
 
-                    {/* Tablolar */}
-                    <div className="space-y-6 sm:space-y-8">
-                      <EmployeeTable 
-                        title="Eski Personel Ekibi" 
-                        icon={<div className="bg-indigo-100 text-indigo-600 p-1.5 rounded-lg"><i className="fa-solid fa-briefcase text-sm"></i></div>}
-                        data={processedOldData} months={months} onEdit={handleEdit} onDelete={handleDeleteClick}
-                        badgeClass="bg-indigo-50 text-indigo-700 border-indigo-100" typeLabel="Eski"
-                      />
-                      <EmployeeTable 
-                        title="Yeni Personel Ekibi" 
-                        icon={<div className="bg-amber-100 text-amber-600 p-1.5 rounded-lg"><i className="fa-solid fa-star text-sm"></i></div>}
-                        data={processedNewData} months={months} onEdit={handleEdit} onDelete={handleDeleteClick}
-                        badgeClass="bg-amber-50 text-amber-700 border-amber-100" typeLabel="Yeni"
-                      />
-                    </div>
+                    {/* Yüzen Ekleme Butonu (FAB) */}
+                    <button onClick={openAddModal} className="fixed bottom-6 right-6 sm:bottom-10 sm:right-10 w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full shadow-2xl shadow-cyan-500/50 text-white flex items-center justify-center text-2xl hover:scale-110 active:scale-95 transition-all z-40 animate-slide-up border-2 border-white/50">
+                        <i className="fa-solid fa-plus"></i>
+                    </button>
                   </div>
                 )}
 
+                {/* --- Raporlar Sekmesi --- */}
                 {activeTab === 'reports' && (
-                  <div className="max-w-4xl mx-auto">
+                  <div className="max-w-4xl mx-auto animate-fade-in">
                     <div className="flex flex-wrap justify-end gap-2 sm:gap-3 mb-6 print:hidden">
-                      <button onClick={handleWhatsAppShare} className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white px-4 sm:px-6 py-3.5 rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-2 text-sm">
-                        <i className="fa-brands fa-whatsapp text-lg"></i> WhatsApp Paylaş
+                      <button onClick={()=>window.open(`https://wa.me/?text=${encodeURIComponent(generateWhatsAppText())}`)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3.5 rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-emerald-500/30 flex items-center gap-2">
+                        <i className="fa-brands fa-whatsapp text-xl"></i> WhatsApp Paylaş
                       </button>
-                      <button onClick={handlePrintPDF} className="flex-1 sm:flex-none bg-cyan-600 hover:bg-cyan-700 text-white px-4 sm:px-6 py-3.5 rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-cyan-600/30 flex items-center justify-center gap-2 text-sm">
-                        <i className="fa-solid fa-print text-lg"></i> PDF Çıktısı
+                      <button onClick={()=>window.print()} className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3.5 rounded-2xl font-bold transition-all active:scale-95 shadow-xl shadow-cyan-600/30 flex items-center gap-2">
+                        <i className="fa-solid fa-print text-xl"></i> PDF Çıktısı
                       </button>
                     </div>
 
-                    <div className="bg-white p-6 sm:p-10 md:p-14 rounded-[2.5rem] shadow-2xl shadow-cyan-900/10 border border-white print:shadow-none print:border-none print:p-0">
-                      <div className="text-center mb-8 sm:mb-12 pb-6 sm:pb-8 border-b-2 border-dashed border-slate-200">
-                        <div className="flex justify-center mb-4 sm:mb-6 text-amber-500 drop-shadow-xl relative">
-                          <i className="fa-solid fa-champagne-glasses text-5xl sm:text-6xl"></i>
-                          <i className="fa-solid fa-sun absolute -top-4 -right-4 text-3xl text-amber-300 animate-spin-slow" style={{animationDuration: '10s'}}></i>
+                    <div className="bg-white p-6 sm:p-12 md:p-16 rounded-[3rem] shadow-2xl shadow-black/20 border border-white print:shadow-none print:border-none print:p-0 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500"></div>
+                      
+                      <div className="text-center mb-12 pb-8 border-b-2 border-dashed border-slate-200">
+                        <div className="flex justify-center mb-6 text-amber-500 drop-shadow-xl relative inline-block mx-auto">
+                          <i className="fa-solid fa-plane-departure text-6xl text-cyan-600"></i>
                         </div>
-                        <h1 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase tracking-tight mb-2 sm:mb-3">İhlas Pazarlama</h1>
-                        <h2 className="text-lg sm:text-2xl font-extrabold text-cyan-600 uppercase tracking-widest">Antalya Tatili Raporu</h2>
-                        <p className="text-slate-400 mt-3 sm:mt-4 text-xs sm:text-sm font-bold bg-slate-50 border border-slate-100 inline-block px-4 py-1.5 rounded-full">Tarih: {new Date().toLocaleDateString('tr-TR')}</p>
+                        <h1 className="text-3xl sm:text-5xl font-black text-slate-900 uppercase tracking-tighter mb-3">İhlas Pazarlama</h1>
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-cyan-600 uppercase tracking-widest mb-4">Antalya Tatili Sonuçları</h2>
+                        <span className="bg-slate-100 text-slate-500 text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider border border-slate-200">Tarih: {new Date().toLocaleDateString('tr-TR')}</span>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mb-10 sm:mb-14">
-                        <div className="text-center px-6 sm:px-10 py-5 sm:py-6 bg-slate-50 rounded-3xl border border-slate-100 flex-1">
-                          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Toplam Personel</p>
-                          <p className="text-3xl sm:text-5xl font-black text-slate-800">{employees.length}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+                        <div className="text-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Görev Alan Personel</p>
+                          <p className="text-5xl font-black text-slate-800">{employees.length}</p>
                         </div>
-                        <div className="text-center px-6 sm:px-10 py-5 sm:py-6 bg-gradient-to-b from-emerald-50 to-teal-50 rounded-3xl border border-emerald-100 flex-1 shadow-inner relative overflow-hidden">
-                          <i className="fa-solid fa-plane absolute -right-4 -bottom-4 text-emerald-500/10 text-6xl -rotate-45"></i>
-                          <p className="text-[10px] sm:text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1.5">Tatili Kazanan</p>
-                          <p className="text-3xl sm:text-5xl font-black text-emerald-700 relative z-10">{totalWinners}</p>
+                        <div className="text-center p-6 bg-emerald-50 rounded-3xl border border-emerald-100 relative overflow-hidden">
+                          <i className="fa-solid fa-ticket absolute -right-6 -bottom-6 text-emerald-500/10 text-7xl -rotate-45"></i>
+                          <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-2 relative z-10">Biletini Alanlar</p>
+                          <p className="text-5xl font-black text-emerald-700 relative z-10">{totalWinners}</p>
                         </div>
                       </div>
 
-                      <ReportListSection title="Eski Personel Kazananları" data={processedOldData.filter(e => e.isWinner)} target={targetOld} colorClass="text-indigo-700 border-indigo-200" bgClass="bg-indigo-50" />
-                      <div className="mt-8 sm:mt-12">
-                        <ReportListSection title="Yeni Personel Kazananları" data={processedNewData.filter(e => e.isWinner)} target={targetNew} colorClass="text-amber-700 border-amber-200" bgClass="bg-amber-50" />
-                      </div>
+                      <ReportListSection title="Eski Personel Uçuş Listesi" data={processedOldData.filter(e => e.isWinner)} target={targetOld} color="indigo" />
+                      <div className="mt-12"><ReportListSection title="Yeni Personel Uçuş Listesi" data={processedNewData.filter(e => e.isWinner)} target={targetNew} color="amber" /></div>
 
-                      <div className="mt-12 sm:mt-20 pt-6 sm:pt-8 border-t-2 border-dashed border-slate-200 text-center">
-                        <p className="text-xs sm:text-sm font-bold text-slate-400">Bu rapor sistem tarafından otomatik olarak oluşturulmuştur.</p>
-                        <p className="text-xs sm:text-sm font-black text-cyan-600 mt-2">Tüm kazanan çalışma arkadaşlarımızı tebrik ederiz! İyi Tatiller 🌴🌊</p>
+                      <div className="mt-16 pt-8 border-t-2 border-dashed border-slate-200 text-center">
+                        <i className="fa-solid fa-sun text-4xl text-amber-400 mb-4 animate-spin-slow" style={{animationDuration: '15s'}}></i>
+                        <p className="text-lg font-black text-slate-800 uppercase tracking-wider">Antalya'da Görüşmek Üzere!</p>
+                        <p className="text-sm font-bold text-slate-500 mt-2">Bu rapor sistem tarafından otomatik oluşturulmuştur.</p>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
 
+              {/* --- FORM MODALI --- */}
+              {isModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh]">
+                        <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center shrink-0">
+                            <h2 className="text-xl font-black text-slate-800 flex items-center gap-3">
+                                <div className="bg-cyan-100 text-cyan-600 w-10 h-10 rounded-xl flex items-center justify-center"><i className="fa-solid fa-id-card-clip"></i></div>
+                                {editingId ? 'Yolcu Bilgisi Güncelle' : 'Yeni Yolcu Ekle'}
+                            </h2>
+                            <button onClick={()=>setIsModalOpen(false)} className="w-10 h-10 bg-white rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 shadow-sm transition-colors"><i className="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        
+                        <div className="p-6 overflow-y-auto custom-scrollbar">
+                            {formError && <div className="mb-6 p-4 bg-rose-50 border border-rose-100 text-rose-600 rounded-2xl text-sm font-bold animate-pulse"><i className="fa-solid fa-triangle-exclamation mr-2"></i> {formError}</div>}
+                            
+                            <form id="employeeForm" onSubmit={handleFormSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide ml-1">Ad Soyad</label>
+                                        <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide ml-1">Ofis</label>
+                                        <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-sm" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide ml-1">İPAŞ Giriş Tarihi</label>
+                                    <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-sm" />
+                                </div>
+                                
+                                <div className="p-5 bg-slate-50/50 border border-slate-100 rounded-2xl">
+                                    <label className="block text-[11px] font-bold text-cyan-600 mb-4 uppercase tracking-widest"><i className="fa-solid fa-chart-line mr-1"></i> Aylık Satış Performansı</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {months.map(m => (
+                                            <div key={m.id}>
+                                                <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1">{m.name} (TL)</label>
+                                                <input type="text" inputMode="numeric" value={formData.sales[m.id]?formatInputNumber(formData.sales[m.id]):''} onChange={e=>handleSalesChange(m.id, e.target.value)} placeholder="0" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none font-bold text-sm" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {months.length === 0 && <p className="text-xs text-rose-500 font-bold">Önce ayarlardan ay eklemelisiniz.</p>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-bold text-rose-500 mb-1.5 uppercase tracking-wide ml-1">Toplam İade (TL)</label>
+                                    <input name="returns" value={formData.returns?formatInputNumber(formData.returns):''} onChange={handleInputChange} type="text" inputMode="numeric" placeholder="0" className="w-full px-4 py-3 bg-rose-50 border border-rose-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-rose-400 outline-none font-black text-rose-700 text-sm" />
+                                </div>
+                            </form>
+                        </div>
+
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3 shrink-0">
+                            <button onClick={()=>setIsModalOpen(false)} className="flex-1 py-3.5 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-all">İptal</button>
+                            <button form="employeeForm" type="submit" disabled={months.length===0} className="flex-[2] py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg shadow-cyan-500/30 transition-all flex items-center justify-center gap-2">
+                                <i className="fa-solid fa-floppy-disk"></i> {editingId ? 'Güncelle' : 'Kaydet'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+              )}
+
               {/* Silme Onay Modalı */}
               {deletingId && (
-                <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm print:hidden">
-                  <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-100">
-                    <div className="p-6 sm:p-8 text-center">
-                      <div className="w-16 sm:w-20 h-16 sm:h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-5 border border-rose-100 shadow-inner">
-                        <i className="fa-solid fa-plane-slash text-3xl sm:text-4xl text-rose-500"></i>
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-black text-slate-800 mb-2">Uçuşu İptal Et</h3>
-                      <p className="text-slate-500 text-xs sm:text-sm font-medium leading-relaxed">Bu personeli listeden çıkarmak istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
+                  <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border border-slate-100">
+                    <div className="p-8 text-center">
+                      <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-rose-100"><i className="fa-solid fa-plane-slash text-4xl text-rose-500"></i></div>
+                      <h3 className="text-xl font-black text-slate-800 mb-2">Uçuşu İptal Et</h3>
+                      <p className="text-slate-500 text-sm font-medium">Bu personeli listeden çıkarmak istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
                     </div>
-                    <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-center gap-3">
-                      <button onClick={() => setDeletingId(null)} className="w-full px-6 py-3.5 rounded-2xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all text-sm">Vazgeç</button>
-                      <button onClick={confirmDelete} className="w-full px-6 py-3.5 rounded-2xl font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/30 active:scale-95 transition-all text-sm">Evet, Sil</button>
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                      <button onClick={() => setDeletingId(null)} className="flex-1 py-3.5 rounded-xl font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 transition-all text-sm">Vazgeç</button>
+                      <button onClick={confirmDelete} className="flex-1 py-3.5 rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-600/30 transition-all text-sm">Evet, Sil</button>
                     </div>
                   </div>
                 </div>
@@ -664,246 +674,108 @@
           );
         }
 
-        function EmployeeTable({ title, icon, data, months, onEdit, onDelete, badgeClass, typeLabel }) {
+        // Yardımcı Render Fonksiyonları
+        function EmployeeTable({ data, months, onEdit, onDelete, type }) {
+          const isOld = type === 'old';
+          const badgeColor = isOld ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700';
+          const typeLabel = isOld ? 'Eski' : 'Yeni';
+
           return (
-            <div className="bg-white/95 backdrop-blur-md rounded-[2rem] shadow-xl shadow-cyan-900/5 border border-white overflow-hidden print:hidden">
-              <div className="p-4 sm:p-5 border-b border-slate-100 bg-white/50 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  {icon} <h3 className="font-black text-slate-800 text-sm sm:text-base">{title}</h3>
-                </div>
-                <span className="text-[10px] sm:text-xs text-slate-500 font-black px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100 shadow-inner">{data.length} Kayıt</span>
-              </div>
-              
-              {/* MOBİL GÖRÜNÜM (Uçak Bileti Kart Tasarımı) */}
-              <div className="md:hidden flex flex-col gap-4 p-4 bg-slate-50/50">
-                {data.length === 0 ? (
-                  <div className="text-center py-10 text-slate-400 font-bold text-xs bg-white rounded-2xl border border-dashed border-slate-200"><i className="fa-solid fa-plane text-3xl text-slate-200 block mb-2"></i>Henüz yolcu yok.</div>
-                ) : data.map((emp) => (
-                  <div key={emp.id} className="boarding-pass p-4 shadow-lg shadow-slate-200/60 border border-slate-100">
-                    
-                    <div className="flex justify-between items-center mb-3">
-                        <div className="flex items-center gap-1.5">
-                            <i className="fa-solid fa-plane-departure text-cyan-500 text-[10px]"></i>
-                            <span className="text-[9px] font-black text-slate-400 tracking-widest uppercase">Yolcu Bileti</span>
-                        </div>
-                        <div className="text-[9px] font-black bg-slate-50 text-slate-500 px-2 py-1 rounded-md border border-slate-100">
-                            GİRİŞ: {formatDate(emp.entryDate)}
-                        </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-end mb-4 relative">
-                        <div>
-                            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-widest mb-0.5">Yolcu İsim</p>
-                            <h4 className={`font-black text-base leading-none ${emp.isWinner ? 'text-emerald-600' : 'text-slate-800'}`}>
-                                {emp.name}
-                            </h4>
-                        </div>
-                        {emp.isWinner && <i className="fa-solid fa-stamp text-4xl text-emerald-500/20 -rotate-12 absolute top-0 right-0"></i>}
-                    </div>
-
-                    <div className="flex items-center justify-between bg-cyan-50/50 p-2.5 rounded-xl border border-cyan-100/50 mb-1">
-                        <div className="flex-1">
-                            <p className="text-[8px] text-cyan-600/60 font-bold uppercase tracking-wider mb-0.5">Kalkış</p>
-                            <p className="text-[11px] font-black text-cyan-800 truncate">{emp.office}</p>
-                        </div>
-                        <div className="px-2 text-cyan-300"><i className="fa-solid fa-arrow-right"></i></div>
-                        <div className="flex-1 text-right">
-                            <p className="text-[8px] text-cyan-600/60 font-bold uppercase tracking-wider mb-0.5">Varış</p>
-                            <p className="text-[11px] font-black text-cyan-800">Antalya 🌴</p>
-                        </div>
-                    </div>
-
-                    <div className="ticket-divider"></div>
-
-                    {/* Aylar (Mobil) */}
-                    {months.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        {months.map(m => (
-                           <div key={m.id} className="text-[9px] px-2 py-1 rounded-lg bg-slate-50 border border-slate-100">
-                             <span className="text-slate-400">{m.name.substring(0,3)}:</span> <span className="font-black text-slate-700">{formatTL(emp.sales[m.id]||0)}</span>
-                           </div>
-                        ))}
-                        {emp.returns > 0 && (
-                          <div className="text-[9px] px-2 py-1 rounded-lg bg-rose-50 border border-rose-100 text-rose-600">
-                             <span className="font-bold">İade:</span> -{formatTL(emp.returns)}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-3 gap-2 text-center mb-4">
-                      <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Hedef</p>
-                        <p className="text-[11px] font-black text-slate-700">{formatTL(emp.target)}</p>
-                      </div>
-                      <div className="border-x border-slate-100">
-                        <p className="text-[9px] font-bold text-cyan-500 uppercase tracking-widest mb-0.5">Net Ciro</p>
-                        <p className="text-[11px] font-black text-cyan-600">{formatTL(emp.netRevenue)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Kalan</p>
-                        <p className="text-[11px] font-black text-slate-700">{formatTL(emp.remaining)}</p>
-                      </div>
-                    </div>
-
-                    <div className="mb-4 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                      <div className="flex justify-between items-center mb-1.5">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Uçuş İlerlemesi</span>
-                        <span className={`text-[10px] font-black ${emp.percentage >= 100 ? 'text-emerald-600' : 'text-cyan-600'}`}>% {emp.percentage.toFixed(1)}</span>
-                      </div>
-                      <div className="w-full bg-slate-200/50 rounded-full h-2 relative">
-                        <div className={`h-full rounded-full transition-all duration-1000 relative ${emp.percentage >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : emp.percentage < 30 ? 'bg-gradient-to-r from-rose-400 to-rose-500' : 'water-fill'}`} style={{ width: `${Math.min(emp.percentage, 100)}%` }}>
-                            {emp.percentage > 0 && (
-                                <i className={`fa-solid fa-plane absolute -right-2 -top-1.5 text-[11px] drop-shadow-md progress-plane ${emp.percentage >= 100 ? 'text-emerald-600' : emp.percentage < 30 ? 'text-rose-600' : 'text-cyan-700'}`}></i>
-                            )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      {emp.isWinner ? (
-                          <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/30">
-                              <i className="fa-solid fa-champagne-glasses"></i> KAZANDI
-                          </span>
-                      ) : (
-                          <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-[10px] font-black bg-slate-100 text-slate-400">
-                              BEKLİYOR
-                          </span>
-                      )}
-                      <div className="flex gap-1.5">
-                          <button onClick={() => onEdit(emp)} className="flex items-center justify-center w-8 h-8 bg-slate-50 text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 border border-slate-100 rounded-lg active:scale-95 transition-all"><i className="fa-solid fa-pen text-[10px]"></i></button>
-                          <button onClick={() => onDelete(emp.id)} className="flex items-center justify-center w-8 h-8 bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-100 rounded-lg active:scale-95 transition-all"><i className="fa-solid fa-trash text-[10px]"></i></button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* MASAÜSTÜ GÖRÜNÜM (Tablo Tasarımı) */}
-              <div className="hidden md:block overflow-x-auto p-2">
-                <table className="w-full text-left whitespace-nowrap">
-                  <thead className="text-[10px] text-slate-400 bg-slate-50/80 uppercase border-b border-slate-100">
+            <div className="overflow-x-auto p-2 sm:p-6 bg-white/50">
+                <table className="w-full text-left whitespace-nowrap border-separate border-spacing-y-2">
+                  <thead className="text-[10px] text-slate-400 uppercase">
                     <tr>
-                      <th className="px-4 py-3 font-black tracking-wider rounded-tl-xl">Personel / Ofis</th>
-                      <th className="px-3 py-3 font-black tracking-wider text-center">İPAŞ Giriş / Kat.</th>
-                      <th className="px-3 py-3 font-black tracking-wider text-right min-w-[120px]">Satışlar</th>
-                      <th className="px-3 py-3 font-black tracking-wider text-right text-rose-500">İade</th>
-                      <th className="px-3 py-3 font-black tracking-wider text-right text-cyan-500">Net Ciro</th>
-                      <th className="px-3 py-3 font-black tracking-wider text-right">Hedef / Kalan</th>
-                      <th className="px-4 py-3 font-black tracking-wider w-40">Uçuş İlerlemesi</th>
-                      <th className="px-3 py-3 font-black tracking-wider text-center">Durum</th>
-                      <th className="px-4 py-3 font-black tracking-wider text-center rounded-tr-xl">İşlem</th>
+                      <th className="px-4 py-2 font-black">Personel / Ofis</th>
+                      <th className="px-3 py-2 font-black text-center">Giriş / Kat.</th>
+                      <th className="px-3 py-2 font-black text-right min-w-[120px]">Satışlar</th>
+                      <th className="px-3 py-2 font-black text-right text-rose-400">İade</th>
+                      <th className="px-3 py-2 font-black text-right text-cyan-500">Net Ciro</th>
+                      <th className="px-3 py-2 font-black text-right">Hedef / Kalan</th>
+                      <th className="px-4 py-2 font-black w-40">Uçuş İlerlemesi</th>
+                      <th className="px-3 py-2 font-black text-center">Durum</th>
+                      <th className="px-4 py-2 font-black text-center">İşlem</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody>
                     {data.length === 0 ? (
-                      <tr><td colSpan="10" className="px-4 py-12 text-center font-bold text-slate-400 text-sm"><i className="fa-solid fa-plane text-4xl text-slate-200 block mb-3"></i>Henüz yolcu yok.</td></tr>
+                      <tr><td colSpan="9" className="py-12 text-center text-slate-400"><i className="fa-solid fa-plane text-4xl mb-3 opacity-20 block"></i>Kayıt bulunmuyor.</td></tr>
                     ) : data.map((emp) => (
-                      <tr key={emp.id} className={`transition-all duration-300 hover:bg-slate-50/50 ${emp.isWinner ? 'bg-emerald-50/20' : ''}`}>
-                        <td className="px-4 py-3 relative">
-                          {emp.isWinner && <div className="absolute top-2 bottom-2 left-1.5 w-1 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>}
-                          <div className={`font-black text-[13px] flex items-center gap-1.5 pl-2 ${emp.isWinner ? 'text-emerald-600' : 'text-slate-800'}`}>
-                            {emp.isWinner && <i className="fa-solid fa-champagne-glasses text-emerald-500 text-[10px] drop-shadow-sm"></i>} {emp.name}
-                          </div>
-                          <div className="text-[10px] font-bold text-slate-400 mt-0.5 pl-2"><i className="fa-solid fa-location-dot text-[8px] mr-0.5"></i> {emp.office}</div>
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          <div className="text-[11px] font-bold text-slate-600">{formatDate(emp.entryDate)}</div>
-                          <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-black border uppercase ${badgeClass}`}>{typeLabel}</span>
-                        </td>
-                        <td className="px-3 py-3 text-right text-[10px] font-bold text-slate-500 space-y-0.5">
-                          {months.length === 0 ? <span>-</span> : 
-                            months.map(m => (
-                              <div key={m.id} className="flex justify-end gap-2">
-                                <span className="text-slate-300">{m.name.substring(0,3)}:</span> 
-                                <span className="text-slate-700 font-black">{formatTL(emp.sales[m.id] || 0)}</span>
-                              </div>
-                            ))
-                          }
-                        </td>
-                        <td className="px-3 py-3 text-right text-rose-500 font-black text-[11px]">
-                          {emp.returns > 0 ? <span className="bg-rose-50 px-1.5 py-0.5 rounded">-{formatTL(emp.returns)}</span> : '-'}
-                        </td>
-                        <td className="px-3 py-3 text-right font-black text-cyan-600 text-xs">
-                          {formatTL(emp.netRevenue)}
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          <div className="text-[10px] font-bold text-slate-400 border-b border-slate-100 pb-0.5 mb-0.5">H: {formatTL(emp.target)}</div>
-                          <div className="text-[11px] font-black text-slate-700">{formatTL(emp.remaining)}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className={`text-[10px] font-black ${emp.percentage >= 100 ? 'text-emerald-600' : 'text-cyan-600'}`}>% {emp.percentage.toFixed(1)}</span>
-                          </div>
-                          <div className="w-full bg-slate-200/50 rounded-full h-2 relative">
-                            <div className={`h-full rounded-full transition-all duration-1000 relative ${emp.percentage >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : emp.percentage < 30 ? 'bg-gradient-to-r from-rose-400 to-rose-500' : 'water-fill'}`} style={{ width: `${Math.min(emp.percentage, 100)}%` }}>
-                                {emp.percentage > 0 && (
-                                    <i className={`fa-solid fa-plane absolute -right-2 -top-1.5 text-[12px] drop-shadow-md progress-plane ${emp.percentage >= 100 ? 'text-emerald-600' : emp.percentage < 30 ? 'text-rose-600' : 'text-cyan-600'}`}></i>
-                                )}
+                      <tr key={emp.id} className={`bg-white shadow-sm hover:shadow-md transition-shadow rounded-xl ${emp.isWinner ? 'border-l-4 border-l-emerald-500' : 'border-l-4 border-l-transparent'}`}>
+                        <td className="px-4 py-3 rounded-l-xl">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-[10px] ${getAvatarColor(emp.name)}`}>{getInitials(emp.name)}</div>
+                            <div>
+                                <div className={`font-black text-xs ${emp.isWinner ? 'text-emerald-600' : 'text-slate-800'}`}>{emp.name}</div>
+                                <div className="text-[10px] font-bold text-slate-400"><i className="fa-solid fa-location-dot text-[8px] mr-1"></i>{emp.office}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-3 py-3 text-center">
-                          {emp.isWinner ? (
-                            <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm">
-                              KAZANDI
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg text-[9px] font-black bg-slate-100 text-slate-400 border border-slate-200">
-                              BEKLİYOR
-                            </span>
-                          )}
+                          <div className="text-[10px] font-bold text-slate-600">{formatDate(emp.entryDate)}</div>
+                          <span className={`inline-block mt-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${badgeColor}`}>{typeLabel}</span>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        <td className="px-3 py-3 text-right text-[10px] font-bold text-slate-500 space-y-0.5">
+                          {months.length === 0 ? '-' : months.map(m => (
+                              <div key={m.id} className="flex justify-end gap-2"><span className="text-slate-300">{m.name.substring(0,3)}:</span><span className="text-slate-700">{formatTL(emp.sales[m.id] || 0)}</span></div>
+                          ))}
+                        </td>
+                        <td className="px-3 py-3 text-right text-rose-500 font-black text-[11px]">
+                          {emp.returns > 0 ? <span className="bg-rose-50 px-2 py-1 rounded-md">-{formatTL(emp.returns)}</span> : '-'}
+                        </td>
+                        <td className="px-3 py-3 text-right font-black text-cyan-600 text-xs">{formatTL(emp.netRevenue)}</td>
+                        <td className="px-3 py-3 text-right">
+                          <div className="text-[9px] font-bold text-slate-400 border-b border-slate-50 pb-0.5 mb-0.5">H: {formatTL(emp.target)}</div>
+                          <div className="text-[10px] font-black text-slate-700">{formatTL(emp.remaining)}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-between items-center mb-1"><span className={`text-[9px] font-black ${emp.percentage >= 100 ? 'text-emerald-600' : 'text-cyan-600'}`}>% {emp.percentage.toFixed(1)}</span></div>
+                          <div className="w-full bg-slate-100 rounded-full h-2 relative overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-1000 ${emp.percentage >= 100 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : emp.percentage < 30 ? 'bg-rose-400' : 'water-fill'}`} style={{ width: `${Math.min(emp.percentage, 100)}%` }}></div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          {emp.isWinner ? <span className="bg-emerald-100 text-emerald-600 px-2 py-1 rounded-lg text-[9px] font-black"><i className="fa-solid fa-ticket mr-1"></i>BİLET ALDI</span> : <span className="bg-slate-100 text-slate-400 px-2 py-1 rounded-lg text-[9px] font-black">BEKLİYOR</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center rounded-r-xl">
                           <div className="flex items-center justify-center gap-1.5">
-                            <button onClick={() => onEdit(emp)} className="text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 w-8 h-8 rounded-xl border border-transparent hover:border-cyan-100 flex items-center justify-center transition-all active:scale-95" title="Düzenle">
-                              <i className="fa-solid fa-pen text-xs"></i>
-                            </button>
-                            <button onClick={() => onDelete(emp.id)} className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 w-8 h-8 rounded-xl border border-transparent hover:border-rose-100 flex items-center justify-center transition-all active:scale-95" title="Sil">
-                              <i className="fa-solid fa-trash text-xs"></i>
-                            </button>
+                            <button onClick={()=>onEdit(emp)} className="w-7 h-7 bg-slate-50 hover:bg-cyan-50 text-slate-400 hover:text-cyan-600 rounded-lg transition-colors"><i className="fa-solid fa-pen text-[10px]"></i></button>
+                            <button onClick={()=>onDelete(emp.id)} className="w-7 h-7 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"><i className="fa-solid fa-trash text-[10px]"></i></button>
                           </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
             </div>
           );
         }
 
-        // RAPORLAR 
-        function ReportListSection({ title, data, target, colorClass, bgClass }) {
+        function ReportListSection({ title, data, target, color }) {
           if (data.length === 0) return null;
+          const isIndigo = color === 'indigo';
           return (
-            <div className="mb-6 sm:mb-8">
-              <div className={`flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-3 border-b-2 pb-2 ${colorClass}`}>
-                <h3 className="text-sm sm:text-base font-black uppercase tracking-wider flex items-center gap-2"><i className="fa-solid fa-star text-xs"></i> {title}</h3>
-                <span className="text-[10px] sm:text-xs font-bold text-slate-500 bg-white px-2 py-0.5 rounded-lg border border-slate-100 shadow-sm">Hedef: {formatTL(target)}</span>
+            <div className="mb-8">
+              <div className={`flex justify-between items-end mb-4 pb-2 border-b-2 ${isIndigo ? 'border-indigo-100' : 'border-amber-100'}`}>
+                <h3 className={`text-sm sm:text-base font-black uppercase flex items-center gap-2 ${isIndigo ? 'text-indigo-600' : 'text-amber-500'}`}><i className="fa-solid fa-plane-up"></i> {title}</h3>
+                <span className="text-[10px] font-bold text-slate-400">Hedef: {formatTL(target)}</span>
               </div>
-              <div className="rounded-2xl sm:rounded-[2rem] overflow-x-auto border border-slate-100 shadow-sm">
-                <table className="w-full text-xs text-left whitespace-nowrap">
-                  <thead className={`font-black uppercase tracking-wider text-[10px] sm:text-[11px] ${bgClass} ${colorClass}`}>
+              <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-white">
+                <table className="w-full text-left whitespace-nowrap">
+                  <thead className={`text-[10px] font-black uppercase ${isIndigo ? 'bg-indigo-50 text-indigo-800' : 'bg-amber-50 text-amber-800'}`}>
                     <tr>
-                      <th className="px-4 sm:px-6 py-3 sm:py-4 rounded-tl-2xl">Sıra</th>
-                      <th className="px-4 sm:px-6 py-3 sm:py-4">Yolcu Bilgisi</th>
-                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-right">Net Ciro</th>
-                      <th className="px-4 sm:px-6 py-3 sm:py-4 text-right rounded-tr-2xl">Başarı Oranı</th>
+                      <th className="px-6 py-4">Sıra</th>
+                      <th className="px-6 py-4">Yolcu</th>
+                      <th className="px-6 py-4 text-right">Ciro</th>
+                      <th className="px-6 py-4 text-right">Başarı</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50 bg-white">
+                  <tbody className="divide-y divide-slate-50">
                     {data.map((emp, index) => (
-                      <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 sm:px-6 py-2.5 sm:py-3.5 font-bold text-slate-400">#{index + 1}</td>
-                        <td className="px-4 sm:px-6 py-2.5 sm:py-3.5">
-                           <div className="font-black text-slate-800 text-xs sm:text-sm">{emp.name}</div>
-                           <div className="font-bold text-slate-400 text-[9px] sm:text-[10px]"><i className="fa-solid fa-location-dot text-[8px] mr-1"></i>{emp.office}</div>
-                        </td>
-                        <td className="px-4 sm:px-6 py-2.5 sm:py-3.5 text-right font-black text-emerald-600 text-xs sm:text-sm">{formatTL(emp.netRevenue)}</td>
-                        <td className="px-4 sm:px-6 py-2.5 sm:py-3.5 text-right">
-                           <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-xl font-black text-[10px] sm:text-xs shadow-sm">% {emp.percentage.toFixed(0)}</span>
-                        </td>
+                      <tr key={emp.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-3.5 font-bold text-slate-400">#{index + 1}</td>
+                        <td className="px-6 py-3.5"><div className="font-black text-sm text-slate-800">{emp.name}</div><div className="text-[10px] font-bold text-slate-400">{emp.office}</div></td>
+                        <td className="px-6 py-3.5 text-right font-black text-emerald-600">{formatTL(emp.netRevenue)}</td>
+                        <td className="px-6 py-3.5 text-right"><span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-xl text-[10px] font-black">% {emp.percentage.toFixed(0)}</span></td>
                       </tr>
                     ))}
                   </tbody>
