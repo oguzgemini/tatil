@@ -6,10 +6,12 @@ const formatTL = (amount) => {
   return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(amount) + ' ₺';
 };
 
-// Tarih formatı için yardımcı fonksiyon
+// Tarih formatı için yardımcı fonksiyon (Çökme korumalı)
 const formatDate = (dateString) => {
   if (!dateString) return '-';
   const date = new Date(dateString);
+  // Geçersiz tarih formatı girilirse sayfanın çökmesini engeller
+  if (isNaN(date.getTime())) return '-';
   return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
@@ -34,12 +36,19 @@ export default function App() {
   const [formData, setFormData] = useState({
     name: '', office: '', entryDate: '', jan: '', feb: '', mar: '', returns: ''
   });
+  
+  // UI Kontrol State'leri (Çökmeleri engelleyen özel pencereler için)
   const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null); // Silinecek personelin ID'sini tutar
+  const [formError, setFormError] = useState(''); // Form doğrulama hatasını tutar
 
-  // Personelin yeni olup olmadığını kontrol eden fonksiyon
+  // Personelin yeni olup olmadığını kontrol eden fonksiyon (Çökme korumalı)
   const isNewEmployee = (dateStr) => {
     if (!dateStr || !cutoffDate) return false;
-    return new Date(dateStr) >= new Date(cutoffDate);
+    const empDate = new Date(dateStr);
+    const cutDate = new Date(cutoffDate);
+    if (isNaN(empDate.getTime()) || isNaN(cutDate.getTime())) return false;
+    return empDate >= cutDate;
   };
 
   // Eski Personel Verilerini Hesapla ve Sırala
@@ -48,17 +57,19 @@ export default function App() {
       .filter(emp => !isNewEmployee(emp.entryDate))
       .map(emp => {
         const netRevenue = (Number(emp.jan) || 0) + (Number(emp.feb) || 0) + (Number(emp.mar) || 0) - (Number(emp.returns) || 0);
-        const remaining = targetOld - netRevenue;
-        let percentage = (netRevenue / targetOld) * 100;
-        if (percentage < 0) percentage = 0;
+        const currentTarget = Number(targetOld) || 0; // Eğer hedef silinirse 0 kabul et (NaN hatasını önler)
+        const remaining = currentTarget - netRevenue;
+        
+        let percentage = currentTarget > 0 ? (netRevenue / currentTarget) * 100 : 0;
+        if (isNaN(percentage) || percentage < 0) percentage = 0;
 
         return {
           ...emp,
-          target: targetOld,
+          target: currentTarget,
           netRevenue,
           remaining: remaining > 0 ? remaining : 0,
           percentage,
-          isWinner: netRevenue >= targetOld
+          isWinner: currentTarget > 0 && netRevenue >= currentTarget
         };
       }).sort((a, b) => b.percentage - a.percentage);
   }, [employees, targetOld, cutoffDate]);
@@ -69,17 +80,19 @@ export default function App() {
       .filter(emp => isNewEmployee(emp.entryDate))
       .map(emp => {
         const netRevenue = (Number(emp.jan) || 0) + (Number(emp.feb) || 0) + (Number(emp.mar) || 0) - (Number(emp.returns) || 0);
-        const remaining = targetNew - netRevenue;
-        let percentage = (netRevenue / targetNew) * 100;
-        if (percentage < 0) percentage = 0;
+        const currentTarget = Number(targetNew) || 0;
+        const remaining = currentTarget - netRevenue;
+        
+        let percentage = currentTarget > 0 ? (netRevenue / currentTarget) * 100 : 0;
+        if (isNaN(percentage) || percentage < 0) percentage = 0;
 
         return {
           ...emp,
-          target: targetNew,
+          target: currentTarget,
           netRevenue,
           remaining: remaining > 0 ? remaining : 0,
           percentage,
-          isWinner: netRevenue >= targetNew
+          isWinner: currentTarget > 0 && netRevenue >= currentTarget
         };
       }).sort((a, b) => b.percentage - a.percentage);
   }, [employees, targetNew, cutoffDate]);
@@ -88,6 +101,7 @@ export default function App() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    if (formError) setFormError(''); // Yazı yazmaya başlayınca hatayı temizle
   };
 
   // Düzenleme modunu aç
@@ -102,6 +116,7 @@ export default function App() {
       returns: employee.returns || ''
     });
     setEditingId(employee.id);
+    setFormError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -109,13 +124,18 @@ export default function App() {
   const handleCancelEdit = () => {
     setFormData({ name: '', office: '', entryDate: '', jan: '', feb: '', mar: '', returns: '' });
     setEditingId(null);
+    setFormError('');
   };
 
-  // Form gönderimi
+  // Form gönderimi (Özel Hata Mesajlı)
   const handleFormSubmit = (e) => {
     e.preventDefault();
+    
+    // Klasik "alert()" yerine kendi state'imizi kullanıyoruz
     if (!formData.name || !formData.office || !formData.entryDate) {
-      alert("Lütfen personel adı, ofis ve işe giriş tarihi bilgilerini eksiksiz giriniz.");
+      setFormError("Lütfen personel adı, ofis ve işe giriş tarihi bilgilerini eksiksiz doldurunuz.");
+      // 4 saniye sonra hatayı otomatik gizle
+      setTimeout(() => setFormError(''), 4000);
       return;
     }
 
@@ -145,12 +165,19 @@ export default function App() {
       setEmployees(prev => [...prev, newEmp]);
     }
     setFormData({ name: '', office: '', entryDate: '', jan: '', feb: '', mar: '', returns: '' });
+    setFormError('');
   };
 
-  // Personel sil
-  const handleDelete = (id) => {
-    if (window.confirm("Bu personeli silmek istediğinize emin misiniz?")) {
-      setEmployees(prev => prev.filter(emp => emp.id !== id));
+  // Silme Onay Penceresini Aç
+  const handleDeleteClick = (id) => {
+    setDeletingId(id);
+  };
+
+  // Silme İşlemini Onayla
+  const confirmDelete = () => {
+    if (deletingId) {
+      setEmployees(prev => prev.filter(emp => emp.id !== deletingId));
+      setDeletingId(null);
     }
   };
 
@@ -194,7 +221,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 print:bg-white text-slate-800 font-sans pb-20">
+    <div className="min-h-screen bg-slate-50 print:bg-white text-slate-800 font-sans pb-20 relative">
       
       {/* Üst Navigasyon - Yazdırmada Gizle */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-40 print:hidden">
@@ -268,7 +295,7 @@ export default function App() {
                     <div className="relative">
                       <input 
                         type="number" 
-                        value={targetOld} 
+                        value={targetOld === 0 ? '' : targetOld} 
                         onChange={(e) => setTargetOld(Number(e.target.value))}
                         className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
                       />
@@ -280,7 +307,7 @@ export default function App() {
                     <div className="relative">
                       <input 
                         type="number" 
-                        value={targetNew} 
+                        value={targetNew === 0 ? '' : targetNew} 
                         onChange={(e) => setTargetNew(Number(e.target.value))}
                         className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
                       />
@@ -310,18 +337,27 @@ export default function App() {
                   {editingId ? <Edit2 className="w-5 h-5 text-blue-500" /> : <Plus className="w-5 h-5 text-green-500" />}
                   {editingId ? 'Personel Bilgilerini Düzenle' : 'Yeni Personel / Veri Girişi'}
                 </h2>
+                
+                {/* Özel Hata Mesajı Bölümü */}
+                {formError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2 text-sm font-bold animate-pulse">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    {formError}
+                  </div>
+                )}
+
                 <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Ad Soyad</label>
-                    <input required name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Ofis</label>
-                    <input required name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide flex items-center gap-1"><Calendar className="w-3 h-3"/> Giriş Tarihi</label>
-                    <input required type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
+                    <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
                   </div>
                   
                   <div>
@@ -364,7 +400,7 @@ export default function App() {
                 icon={<Briefcase className="w-5 h-5 text-purple-600" />}
                 data={processedOldData}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={handleDeleteClick}
                 badgeClass="bg-purple-100 text-purple-800 border-purple-200"
                 typeLabel="Eski"
               />
@@ -374,7 +410,7 @@ export default function App() {
                 icon={<UserPlus className="w-5 h-5 text-orange-600" />}
                 data={processedNewData}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={handleDeleteClick}
                 badgeClass="bg-orange-100 text-orange-800 border-orange-200"
                 typeLabel="Yeni"
               />
@@ -462,6 +498,36 @@ export default function App() {
         )}
 
       </div>
+
+      {/* ÖZEL SİLME ONAY PENCERESİ (alert/confirm yerine) */}
+      {deletingId && (
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm print:hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Personeli Sil</h3>
+              <p className="text-slate-600 text-sm">Bu personeli listeden çıkarmak istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-center gap-3">
+              <button 
+                onClick={() => setDeletingId(null)} 
+                className="px-6 py-2.5 rounded-lg font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition-colors"
+              >
+                İptal Et
+              </button>
+              <button 
+                onClick={confirmDelete} 
+                className="px-6 py-2.5 rounded-lg font-bold bg-red-600 hover:bg-red-700 text-white shadow-md transition-colors"
+              >
+                Evet, Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
