@@ -147,7 +147,7 @@
             return colors[sum % colors.length];
         };
 
-        // Ses Efektleri Sentezleyici (Sıfır Dışa Bağımlılık)
+        // Ses Efektleri Sentezleyici
         const playSound = (type) => {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -180,7 +180,6 @@
 
         // --- Alt Bileşenler ---
 
-        // 1. Geri Sayım Sayacı Bileşeni
         const CountdownTimer = () => {
             const targetDate = new Date('2026-04-01T00:00:00').getTime();
             const [timeLeft, setTimeLeft] = useState(targetDate - new Date().getTime());
@@ -220,7 +219,6 @@
             );
         };
 
-        // 2. Liderlik Podyumu Bileşeni
         const Podium = ({ data }) => {
             if (data.length === 0) return null;
             const top3 = [...data].sort((a,b) => {
@@ -236,7 +234,6 @@
                     3: 'from-orange-300 to-orange-500 border-orange-200 text-orange-900'
                 };
                 const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
-                // Podyum boyları düşürüldü
                 const heights = { 1: 'h-36 sm:h-44 z-10 scale-105', 2: 'h-28 sm:h-36', 3: 'h-24 sm:h-32' };
 
                 return (
@@ -266,7 +263,6 @@
             );
         };
 
-        // 3. Skeleton Tablo
         const SkeletonTable = () => (
             <div className="space-y-4 p-4">
                 {[1,2,3].map(i => (
@@ -287,6 +283,7 @@
           const [user, setUser] = useState(null);
           const [dbStatus, setDbStatus] = useState('loading'); 
           const [employees, setEmployees] = useState([]); 
+          const [archives, setArchives] = useState([]);
 
           // UI States
           const [activeTab, setActiveTab] = useState('dashboard');
@@ -295,11 +292,17 @@
           const [isDeletingAll, setIsDeletingAll] = useState(false);
           const [settingsSaved, setSettingsSaved] = useState(false);
           
-          // Profil Modalı ve Arama Filtreleri
-          const [selectedProfile, setSelectedProfile] = useState(null); // Yolcu Paneli için
+          // Profil & Arşiv Modalı
+          const [selectedProfile, setSelectedProfile] = useState(null); 
           const [searchTerm, setSearchTerm] = useState('');
           const [filterOffice, setFilterOffice] = useState('All');
           
+          // Arşivleme State'leri
+          const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+          const [archiveMonth, setArchiveMonth] = useState('');
+          const [archiveYear, setArchiveYear] = useState(new Date().getFullYear().toString());
+          const [selectedArchive, setSelectedArchive] = useState(null);
+
           // Tema Ayarı
           const [isNightMode, setIsNightMode] = useState(false);
 
@@ -321,14 +324,13 @@
           useEffect(() => {
               const checkTime = () => {
                   const hour = new Date().getHours();
-                  setIsNightMode(hour >= 19 || hour < 6); // 19:00 ile 06:00 arası akşam
+                  setIsNightMode(hour >= 19 || hour < 6); 
               };
               checkTime();
               const timer = setInterval(checkTime, 60000);
               return () => clearInterval(timer);
           }, []);
 
-          // Ofis Listesi
           const uniqueOffices = useMemo(() => {
               const offices = employees.map(e => e.office).filter(Boolean);
               return [...new Set(offices)].sort();
@@ -341,6 +343,7 @@
             return () => unsubscribe();
           }, []);
 
+          // Çalışanları Çek
           useEffect(() => {
             if (!user) return; 
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'employees'));
@@ -350,6 +353,19 @@
               setEmployees(data);
               setDbStatus('connected');
             }, (err) => setDbStatus('error'));
+            return () => unsubscribe();
+          }, [user]);
+
+          // Arşivleri Çek
+          useEffect(() => {
+            if (!user) return;
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'archives'));
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const data = [];
+                snapshot.forEach(doc => data.push({ id: doc.id, ...doc.data() }));
+                data.sort((a, b) => b.dateArchived - a.dateArchived); // Yeniden eskiye sırala
+                setArchives(data);
+            }, (err) => console.log("Arşivler çekilemedi", err));
             return () => unsubscribe();
           }, [user]);
 
@@ -383,16 +399,18 @@
           };
 
           const handleTabChange = (tabName) => {
-            if (tabName === 'reports' && activeTab !== 'reports') {
+            if ((tabName === 'reports' || tabName === 'archives') && activeTab !== tabName) {
               setIsFlying(true); 
               playSound('swoosh');
               setTimeout(() => setIsFlying(false), 2500); 
-              setTimeout(() => fireConfetti(), 800);
+              if(tabName === 'reports') setTimeout(() => fireConfetti(), 800);
             }
-            setActiveTab(tabName); window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveTab(tabName); 
+            setSelectedArchive(null); // Arşiv sekmesine geçerken detay görünümünü sıfırla
+            window.scrollTo({ top: 0, behavior: 'smooth' });
           };
 
-          // --- Ayarlar İşlemleri ---
+          // --- Ayarlar & Temizleme İşlemleri ---
           const handleAddMonth = () => {
             if (!newMonthName.trim()) return;
             setMonths([...months, { id: 'm' + Date.now(), name: newMonthName.trim() }]);
@@ -425,11 +443,10 @@
             return empDate >= cutDate;
           };
 
-          // Gelişmiş Veri İşleme ve Rozet Atama (Gamification)
+          // Gelişmiş Veri İşleme
           const processData = (isNewType) => {
             let filtered = employees.filter(emp => isNewEmployee(emp.entryDate) === isNewType);
             
-            // Arama ve Filtreleme
             if (searchTerm) {
                 filtered = filtered.filter(e => e.name.toLowerCase().includes(searchTerm.toLowerCase()));
             }
@@ -447,14 +464,11 @@
                 return { ...emp, target: currentTarget, totalSales, netRevenue, remaining: Math.max(0, remaining), percentage, isWinner: currentTarget > 0 && netRevenue >= currentTarget, badges: [] };
             }).sort((a, b) => b.percentage - a.percentage);
 
-            // Rozet Atamaları
             if (processed.length > 0) {
-                // Ciro Kralı
                 const maxCiro = Math.max(...processed.map(e => e.netRevenue));
                 if (maxCiro > 0) {
                     processed.forEach(e => { if(e.netRevenue === maxCiro) e.badges.push({icon: '👑', name: 'Ciro Kralı', color: 'text-amber-500 bg-amber-100'}); });
                 }
-                // Kusursuz
                 processed.forEach(e => { if(e.returns === 0 && e.netRevenue > 0) e.badges.push({icon: '🛡️', name: 'Kusursuz', color: 'text-indigo-500 bg-indigo-100'}); });
             }
 
@@ -463,12 +477,41 @@
 
           const processedOldData = useMemo(() => processData(false), [employees, targetOld, cutoffDate, months, searchTerm, filterOffice]);
           const processedNewData = useMemo(() => processData(true), [employees, targetNew, cutoffDate, months, searchTerm, filterOffice]);
-          const totalWinners = employees.filter(emp => {
-              const totalSales = months.reduce((sum, m) => sum + (Number(emp.sales[m.id]) || 0), 0);
-              const netRevenue = totalSales - (Number(emp.returns) || 0);
-              const t = isNewEmployee(emp.entryDate) ? targetNew : targetOld;
-              return t > 0 && netRevenue >= t;
-          }).length;
+          const totalWinners = processedOldData.filter(e => e.isWinner).length + processedNewData.filter(e => e.isWinner).length;
+
+          // --- Arşivleme İşlemi ---
+          const handleArchiveSubmit = async (e) => {
+            e.preventDefault();
+            if (!archiveMonth || !archiveYear || employees.length === 0) return;
+            
+            // Verileri tam haliyle donduruyoruz (Gelecekte hedef değişse de bozulmaz)
+            const archiveData = {
+                month: archiveMonth,
+                year: archiveYear,
+                dateArchived: Date.now(),
+                targetOld: targetOld,
+                targetNew: targetNew,
+                totalEmployees: employees.length,
+                totalWinners: totalWinners,
+                oldWinners: processedOldData.filter(e => e.isWinner).map((e, index) => ({id: index, name: e.name, office: e.office, netRevenue: e.netRevenue, percentage: e.percentage, badges: e.badges})),
+                newWinners: processedNewData.filter(e => e.isWinner).map((e, index) => ({id: index, name: e.name, office: e.office, netRevenue: e.netRevenue, percentage: e.percentage, badges: e.badges}))
+            };
+
+            try {
+                // 1. Arşive Ekle
+                await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'archives'), Date.now().toString()), archiveData);
+                
+                // 2. Mevcut Kayıtları Sil (Yeni döneme hazırlık)
+                const promises = employees.map(emp => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id.toString())));
+                await Promise.all(promises);
+                
+                setIsArchiveModalOpen(false);
+                setArchiveMonth('');
+                handleTabChange('archives'); // Arşivler sekmesine geçiş
+            } catch(err) {
+                console.error("Arşivleme hatası:", err);
+            }
+          };
 
           // --- Form Modalı İşlemleri ---
           const openAddModal = () => {
@@ -516,7 +559,6 @@
           };
 
           const handleDeleteClick = (id) => { setDeletingId(id); setSelectedProfile(null); };
-
           const confirmDelete = async () => {
             if (deletingId) {
               try { await deleteDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'employees'), deletingId.toString())); } catch (err) {}
@@ -524,42 +566,13 @@
             }
           };
 
-          // WhatsApp Raporu
-          const generateWhatsAppText = () => {
-            let text = `✈️🌴 *İHLAS PAZARLAMA - ANTALYA TATİLİ RAPORU* 🌴✈️\n\n`;
-            text += `📊 *Genel Özet*\n👥 Toplam Personel: ${employees.length}\n🍹 Tatili Kazanan: ${totalWinners}\n\n`;
-            
-            const processWhatsAppList = (isNew) => employees.filter(emp => isNewEmployee(emp.entryDate) === isNew)
-              .map(emp => {
-                const total = months.reduce((s, m) => s + (Number(emp.sales[m.id])||0), 0) - (Number(emp.returns)||0);
-                const tgt = isNew ? targetNew : targetOld;
-                return { ...emp, pct: tgt>0 ? (total/tgt)*100 : 0 };
-              }).filter(e => e.pct >= 100).sort((a,b)=>b.pct-a.pct);
-
-            const oldWinners = processWhatsAppList(false);
-            if (oldWinners.length > 0) {
-              text += `🌟 *ESKİ PERSONEL KAZANANLAR*\n`;
-              oldWinners.forEach((e, i) => { text += `${i + 1}. ${e.name} (${e.office})\n`; });
-              text += `\n`;
-            }
-
-            const newWinners = processWhatsAppList(true);
-            if (newWinners.length > 0) {
-              text += `🌟 *YENİ PERSONEL KAZANANLAR*\n`;
-              newWinners.forEach((e, i) => { text += `${i + 1}. ${e.name} (${e.office})\n`; });
-              text += `\n`;
-            }
-            return text;
-          };
-
-          // Tema URL'leri (Gündüz ve Akşam)
-          const bgImageUrl = activeTab === 'reports' 
-            ? "url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?q=80&w=2070&auto=format&fit=crop')" // Raporlar her zaman gün batımı
+          // Tema URL'leri
+          const bgImageUrl = (activeTab === 'reports' || (activeTab === 'archives' && selectedArchive))
+            ? "url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?q=80&w=2070&auto=format&fit=crop')" // Raporlar (Gün batımı)
             : isNightMode 
-                ? "url('https://images.unsplash.com/photo-1534008757030-27299c4371b6?q=80&w=2070&auto=format&fit=crop')" // Akşam/Gece
+                ? "url('https://images.unsplash.com/photo-1534008757030-27299c4371b6?q=80&w=2070&auto=format&fit=crop')" // Gece
                 : "url('https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=2062&auto=format&fit=crop')"; // Gündüz
 
-          // Overlay Rengi
           const overlayClass = isNightMode 
             ? "bg-slate-900/70 backdrop-blur-[6px]" 
             : "bg-cyan-900/40 sm:bg-white/60 backdrop-blur-md";
@@ -600,11 +613,14 @@
                       </div>
                   </div>
                   <div className={`flex p-1.5 rounded-2xl backdrop-blur-md w-full sm:w-auto transition-colors ${isNightMode ? 'bg-black/40 border border-slate-700' : 'bg-black/20 sm:bg-white/50 border border-white/10 sm:border-white'}`}>
-                    <button onClick={() => handleTabChange('dashboard')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 active:scale-95 ${activeTab === 'dashboard' ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-white text-cyan-700 shadow-md') : (isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600 hover:bg-white/20')}`}>
+                    <button onClick={() => handleTabChange('dashboard')} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl font-bold text-[11px] sm:text-sm transition-all duration-300 active:scale-95 ${activeTab === 'dashboard' ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-white text-cyan-700 shadow-md') : (isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600 hover:bg-white/20')}`}>
                       <i className="fa-solid fa-map-location-dot"></i> Ana Sayfa
                     </button>
-                    <button onClick={() => handleTabChange('reports')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 active:scale-95 ${activeTab === 'reports' ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-white text-cyan-700 shadow-md') : (isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600 hover:bg-white/20')}`}>
+                    <button onClick={() => handleTabChange('reports')} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl font-bold text-[11px] sm:text-sm transition-all duration-300 active:scale-95 ${activeTab === 'reports' ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-white text-cyan-700 shadow-md') : (isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600 hover:bg-white/20')}`}>
                       <i className="fa-solid fa-plane-departure"></i> Raporlar
+                    </button>
+                    <button onClick={() => handleTabChange('archives')} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl font-bold text-[11px] sm:text-sm transition-all duration-300 active:scale-95 ${activeTab === 'archives' ? (isNightMode ? 'bg-indigo-600 text-white' : 'bg-white text-cyan-700 shadow-md') : (isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600 hover:bg-white/20')}`}>
+                      <i className="fa-solid fa-box-archive"></i> Arşiv
                     </button>
                   </div>
                 </div>
@@ -614,7 +630,7 @@
                 {activeTab === 'dashboard' && (
                   <div className="max-w-7xl mx-auto print:hidden">
                     
-                    {/* Hero Bölümü (Geri Sayım + Özet) */}
+                    {/* Hero Bölümü */}
                     <div className="flex flex-col lg:flex-row gap-6 mb-8">
                         <CountdownTimer />
                         <div className="flex-1 grid grid-cols-2 gap-4">
@@ -632,7 +648,7 @@
                         </div>
                     </div>
 
-                    {/* Arama ve Filtreleme Barı */}
+                    {/* Arama ve Filtreleme */}
                     <div className={`mb-6 p-2 rounded-2xl flex flex-col md:flex-row items-center gap-3 shadow-lg transition-colors ${isNightMode ? 'bg-slate-800/90 border border-slate-700' : 'bg-white/90 backdrop-blur-md border border-white'}`}>
                         <div className="relative w-full md:w-1/3">
                             <i className="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-400"></i>
@@ -652,7 +668,7 @@
                         </div>
                     </div>
 
-                    {/* Ayarlar Paneli (Açılır/Kapanır) */}
+                    {/* Ayarlar Paneli */}
                     <div className={`mb-8 rounded-3xl shadow-xl overflow-hidden transition-all ${isNightMode ? 'bg-slate-800/90 border border-slate-700' : 'bg-white/95 border border-slate-100'}`}>
                         <button onClick={() => setShowSettings(!showSettings)} className="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-black/5 transition-colors">
                             <span className={`font-black text-base sm:text-lg flex items-center gap-3 ${isNightMode ? 'text-white' : 'text-slate-700'}`}>
@@ -703,12 +719,17 @@
                                     </div>
                                 </div>
                                 
-                                {/* Ayarlar Kaydet & Temizle Bölümü */}
-                                <div className={`p-5 mt-2 border-t flex flex-col sm:flex-row justify-between items-center gap-4 ${isNightMode ? 'bg-slate-900/50 border-slate-700' : 'bg-slate-50/50 border-slate-100'}`}>
-                                    <button onClick={() => setIsDeletingAll(true)} className="text-xs font-bold text-rose-500 hover:text-rose-700 flex items-center gap-1.5 transition-colors p-2 rounded-lg hover:bg-rose-50/10 w-full sm:w-auto justify-center">
-                                        <i className="fa-solid fa-trash-can"></i> Tüm Personel Verilerini Temizle
-                                    </button>
-                                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                                {/* Ayarlar Kaydet, Temizle & Arşivle Bölümü */}
+                                <div className={`p-5 mt-2 border-t flex flex-col lg:flex-row justify-between items-center gap-4 ${isNightMode ? 'bg-slate-900/50 border-slate-700' : 'bg-slate-50/50 border-slate-100'}`}>
+                                    <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-2">
+                                        <button onClick={() => setIsDeletingAll(true)} className="text-xs font-bold text-rose-500 hover:text-rose-700 flex items-center justify-center gap-1.5 transition-colors p-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20">
+                                            <i className="fa-solid fa-trash-can"></i> Tümünü Temizle
+                                        </button>
+                                        <button onClick={() => setIsArchiveModalOpen(true)} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center justify-center gap-1.5 transition-colors p-2.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20">
+                                            <i className="fa-solid fa-box-archive"></i> Verileri Arşivle
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-3 w-full lg:w-auto">
                                         {settingsSaved && <span className="text-xs font-bold text-emerald-500 animate-fade-in flex items-center gap-1"><i className="fa-solid fa-circle-check"></i> Kaydedildi!</span>}
                                         <button onClick={handleSaveSettings} disabled={dbStatus !== 'connected'} className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 ${dbStatus === 'connected' ? (isNightMode?'bg-indigo-600 hover:bg-indigo-700 text-white':'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md shadow-cyan-600/20 active:scale-95') : 'bg-slate-600 text-slate-400 cursor-not-allowed'}`}>
                                             <i className="fa-solid fa-cloud-arrow-up"></i> Ayarları Kaydet
@@ -754,15 +775,6 @@
                 {/* --- Raporlar Sekmesi --- */}
                 {activeTab === 'reports' && (
                   <div className="max-w-4xl mx-auto animate-fade-in">
-                    <div className="flex flex-wrap justify-end gap-2 sm:gap-3 mb-6 print:hidden">
-                      <button onClick={()=>window.open(`https://wa.me/?text=${encodeURIComponent(generateWhatsAppText())}`)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-md flex items-center gap-2 text-sm">
-                        <i className="fa-brands fa-whatsapp text-lg"></i> WhatsApp Paylaş
-                      </button>
-                      <button onClick={()=>window.print()} className="bg-cyan-600 hover:bg-cyan-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all active:scale-95 shadow-md flex items-center gap-2 text-sm">
-                        <i className="fa-solid fa-print text-lg"></i> PDF Çıktısı
-                      </button>
-                    </div>
-
                     <div className="bg-white/95 backdrop-blur-md p-6 sm:p-10 rounded-[2rem] shadow-2xl border border-white/50 print:shadow-none print:border-none print:p-0 relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500"></div>
                       
@@ -789,17 +801,96 @@
 
                       <ReportListSection title="Eski Personel Uçuş Listesi" data={processedOldData.filter(e => e.isWinner)} target={targetOld} color="indigo" />
                       <div className="mt-8"><ReportListSection title="Yeni Personel Uçuş Listesi" data={processedNewData.filter(e => e.isWinner)} target={targetNew} color="amber" /></div>
-
-                      <div className="mt-12 pt-6 border-t border-dashed border-slate-200 text-center">
-                        <p className="text-sm font-black text-slate-800 uppercase tracking-wider">Antalya'da Görüşmek Üzere! 🌴</p>
-                        <p className="text-[10px] font-bold text-slate-400 mt-1">Bu rapor sistem tarafından otomatik oluşturulmuştur.</p>
-                      </div>
                     </div>
+                  </div>
+                )}
+
+                {/* --- Arşiv Sekmesi --- */}
+                {activeTab === 'archives' && (
+                  <div className="max-w-6xl mx-auto animate-fade-in print:hidden">
+                    {!selectedArchive ? (
+                        // Arşiv Listesi Görünümü
+                        <>
+                        <div className="mb-8 flex justify-between items-center">
+                            <h2 className={`text-xl sm:text-2xl font-black uppercase tracking-widest ${isNightMode ? 'text-white' : 'text-slate-800'}`}>
+                                <i className="fa-solid fa-box-archive mr-2 opacity-50"></i> Geçmiş Tatil Arşivleri
+                            </h2>
+                        </div>
+                        
+                        {archives.length === 0 ? (
+                            <div className={`p-12 rounded-3xl text-center border-dashed border-2 ${isNightMode ? 'border-slate-700 bg-slate-800/50 text-slate-400' : 'border-slate-300 bg-white/50 text-slate-500'}`}>
+                                <i className="fa-solid fa-folder-open text-6xl mb-4 opacity-30"></i>
+                                <p className="font-bold text-lg">Henüz arşivlenmiş bir kayıt bulunmuyor.</p>
+                                <p className="text-sm mt-2 opacity-70">Ana sayfadan "Verileri Arşivle" butonu ile yeni arşiv oluşturabilirsiniz.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                {archives.map(arc => (
+                                    <div key={arc.id} onClick={() => setSelectedArchive(arc)} className={`p-6 rounded-3xl cursor-pointer transition-transform hover:-translate-y-1 shadow-xl border relative overflow-hidden group ${isNightMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700' : 'bg-white border-slate-100 hover:shadow-2xl'}`}>
+                                        <i className="fa-solid fa-plane absolute -right-4 -bottom-4 text-7xl opacity-[0.03] group-hover:opacity-[0.06] transition-opacity -rotate-12"></i>
+                                        <div className="flex justify-between items-start mb-4 relative z-10">
+                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-inner ${isNightMode ? 'bg-indigo-900/50 text-indigo-400' : 'bg-cyan-50 text-cyan-600'}`}>
+                                                <i className="fa-solid fa-plane-departure"></i>
+                                            </div>
+                                            <span className="text-[10px] font-bold opacity-50">{new Date(arc.dateArchived).toLocaleDateString('tr-TR')}</span>
+                                        </div>
+                                        <h3 className={`text-xl font-black mb-0.5 relative z-10 ${isNightMode ? 'text-white' : 'text-slate-800'}`}>{arc.month} {arc.year}</h3>
+                                        <p className={`text-xs font-bold uppercase tracking-widest mb-5 relative z-10 ${isNightMode ? 'text-slate-400' : 'text-slate-500'}`}>Tatili</p>
+                                        
+                                        <div className="flex gap-4 border-t pt-4 relative z-10 border-slate-500/20">
+                                            <div className="flex-1">
+                                                <p className="text-[10px] font-bold opacity-60 uppercase">Personel</p>
+                                                <p className={`text-lg font-black ${isNightMode ? 'text-slate-300' : 'text-slate-700'}`}>{arc.totalEmployees}</p>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-[10px] font-bold opacity-60 uppercase">Kazanan</p>
+                                                <p className="text-lg font-black text-emerald-500">{arc.totalWinners}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        </>
+                    ) : (
+                        // Arşiv Detay Görünümü (Dondurulmuş Rapor)
+                        <div className="max-w-4xl mx-auto animate-fade-in relative">
+                            <button onClick={() => setSelectedArchive(null)} className="absolute -top-12 sm:top-6 sm:-left-16 w-10 h-10 bg-slate-800/50 hover:bg-slate-800 text-white rounded-full flex items-center justify-center transition-colors z-20 backdrop-blur-md border border-white/20"><i className="fa-solid fa-arrow-left"></i></button>
+                            
+                            <div className="bg-white/95 backdrop-blur-md p-6 sm:p-10 rounded-[2rem] shadow-2xl border border-white/50 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500"></div>
+                                
+                                <div className="text-center mb-10 pb-6 border-b border-dashed border-slate-200">
+                                    <div className="flex justify-center mb-4 text-indigo-500 drop-shadow-md">
+                                        <i className="fa-solid fa-box-archive text-5xl"></i>
+                                    </div>
+                                    <h1 className="text-2xl sm:text-4xl font-black text-slate-900 uppercase tracking-tighter mb-2">İhlas Pazarlama</h1>
+                                    <h2 className="text-lg sm:text-xl font-extrabold text-indigo-600 uppercase tracking-widest mb-3">{selectedArchive.month} {selectedArchive.year} Arşivi</h2>
+                                    <span className="bg-slate-100 text-slate-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase border border-slate-200">Arşivlenme: {new Date(selectedArchive.dateArchived).toLocaleDateString('tr-TR')}</span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+                                    <div className="text-center p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Görev Alan Personel</p>
+                                        <p className="text-4xl font-black text-slate-800">{selectedArchive.totalEmployees}</p>
+                                    </div>
+                                    <div className="text-center p-5 bg-emerald-50 rounded-2xl border border-emerald-100 relative overflow-hidden">
+                                        <i className="fa-solid fa-ticket absolute -right-4 -bottom-4 text-emerald-500/10 text-5xl -rotate-45"></i>
+                                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1.5 relative z-10">Biletini Alanlar</p>
+                                        <p className="text-4xl font-black text-emerald-700 relative z-10">{selectedArchive.totalWinners}</p>
+                                    </div>
+                                </div>
+
+                                <ReportListSection title="Eski Personel Uçuş Listesi" data={selectedArchive.oldWinners || []} target={selectedArchive.targetOld} color="indigo" />
+                                <div className="mt-8"><ReportListSection title="Yeni Personel Uçuş Listesi" data={selectedArchive.newWinners || []} target={selectedArchive.targetNew} color="amber" /></div>
+                            </div>
+                        </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* --- YOLCU DETAY PANELI (PASSENGER DASHBOARD MODAL) --- */}
+              {/* --- YOLCU DETAY PANELI --- */}
               {selectedProfile && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
                     <div className={`rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-slide-up flex flex-col relative ${isNightMode ? 'bg-slate-800 border border-slate-700 text-white' : 'bg-white border border-slate-100 text-slate-800'}`}>
@@ -823,7 +914,6 @@
 
                         {/* Bilet Detay / İstatistikler */}
                         <div className="p-6">
-                            {/* Rozetler */}
                             {selectedProfile.badges && selectedProfile.badges.length > 0 && (
                                 <div className="flex flex-wrap gap-2 mb-5 pb-5 border-b border-dashed border-slate-200">
                                     {selectedProfile.badges.map((b,i) => (
@@ -843,7 +933,6 @@
                                 </div>
                             </div>
 
-                            {/* Bar Chart (Satış Grafiği) */}
                             {months.length > 0 && (
                                 <div className="mb-6">
                                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-3"><i className="fa-solid fa-chart-column mr-1"></i> Performans Özeti</p>
@@ -867,7 +956,6 @@
                                 </div>
                             )}
 
-                            {/* AI Tavsiyesi & Progress */}
                             <div className={`p-4 rounded-2xl border ${selectedProfile.percentage >= 100 ? 'bg-emerald-50/10 border-emerald-100/20' : 'bg-slate-50/10 border-slate-100/20'}`}>
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Uçuş Durumu</span>
@@ -932,7 +1020,6 @@
                                             </div>
                                         ))}
                                     </div>
-                                    {months.length === 0 && <p className="text-[10px] text-rose-500 font-bold mt-2">Önce ayarlardan ay eklemelisiniz.</p>}
                                 </div>
 
                                 <div>
@@ -948,6 +1035,58 @@
                                 <i className="fa-solid fa-floppy-disk"></i> {editingId ? 'Güncelle' : 'Kaydet'}
                             </button>
                         </div>
+                    </div>
+                </div>
+              )}
+
+              {/* --- ARŞİV OLUŞTURMA MODALI --- */}
+              {isArchiveModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
+                    <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border ${isNightMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100'}`}>
+                        <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                            <h2 className="text-lg font-black flex items-center gap-2">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isNightMode ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-600'}`}><i className="fa-solid fa-box-archive text-sm"></i></div>
+                                Arşiv Oluştur
+                            </h2>
+                            <button onClick={()=>setIsArchiveModalOpen(false)} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${isNightMode ? 'bg-slate-700 hover:bg-rose-900 text-slate-300' : 'bg-white hover:bg-rose-50 text-slate-400'}`}><i className="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <form onSubmit={handleArchiveSubmit}>
+                            <div className="p-5">
+                                <p className="opacity-70 text-xs font-medium leading-relaxed mb-4">Mevcut kampanyayı sonlandırıp güncel kazananları arşive kaldıracaksınız. Lütfen dönemi belirtin.</p>
+                                
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wide ml-1">Kampanya Ayı</label>
+                                        <select required value={archiveMonth} onChange={e=>setArchiveMonth(e.target.value)} className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-indigo-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 border border-slate-200'}`}>
+                                            <option value="">Seçiniz...</option>
+                                            <option value="Ocak">Ocak</option>
+                                            <option value="Şubat">Şubat</option>
+                                            <option value="Mart">Mart</option>
+                                            <option value="Nisan">Nisan</option>
+                                            <option value="Mayıs">Mayıs</option>
+                                            <option value="Haziran">Haziran</option>
+                                            <option value="Temmuz">Temmuz</option>
+                                            <option value="Ağustos">Ağustos</option>
+                                            <option value="Eylül">Eylül</option>
+                                            <option value="Ekim">Ekim</option>
+                                            <option value="Kasım">Kasım</option>
+                                            <option value="Aralık">Aralık</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wide ml-1">Kampanya Yılı</label>
+                                        <input required type="number" value={archiveYear} onChange={e=>setArchiveYear(e.target.value)} className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-indigo-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500 border border-slate-200'}`} />
+                                    </div>
+                                </div>
+                                <div className="mt-5 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-bold">
+                                    <i className="fa-solid fa-triangle-exclamation mr-1.5 text-amber-600"></i> Bu işlemi onayladığınızda, <b>mevcut tüm personel kayıtları</b> temizlenecek ve sadece başarılı personeller arşive aktarılacaktır.
+                                </div>
+                            </div>
+                            <div className={`p-4 border-t flex gap-2 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                <button type="button" onClick={() => setIsArchiveModalOpen(false)} className={`flex-1 py-2.5 rounded-lg font-bold transition-all text-sm ${isNightMode ? 'bg-slate-800 hover:bg-slate-700 text-white' : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-600'}`}>İptal Et</button>
+                                <button type="submit" disabled={employees.length===0} className={`flex-1 py-2.5 rounded-lg font-bold text-white shadow-md transition-all text-sm active:scale-95 ${employees.length===0 ? 'bg-slate-500 opacity-50 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20'}`}>Arşivle</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
               )}
@@ -978,11 +1117,11 @@
                         <i className="fa-solid fa-triangle-exclamation text-2xl text-rose-500"></i>
                       </div>
                       <h3 className="text-lg font-black mb-1">Tüm Verileri Temizle</h3>
-                      <p className="opacity-70 text-xs font-medium leading-relaxed mt-2">Bu işlem <b>TÜM PERSONEL KAYITLARINI</b> kalıcı olarak silecektir. Yeni bir kampanya dönemine geçmek istediğinize emin misiniz?</p>
+                      <p className="opacity-70 text-xs font-medium leading-relaxed mt-2">Bu işlem <b>TÜM PERSONEL KAYITLARINI</b> kalıcı olarak silecektir. Arşiv oluşturmadan silmek istediğinize emin misiniz?</p>
                     </div>
                     <div className={`p-4 border-t flex gap-2 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                       <button onClick={() => setIsDeletingAll(false)} className={`flex-1 py-2.5 rounded-lg font-bold transition-all text-sm ${isNightMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-600'}`}>İptal Et</button>
-                      <button onClick={confirmDeleteAll} className="flex-1 py-2.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all text-sm active:scale-95">Evet, Tümünü Sil</button>
+                      <button onClick={confirmDeleteAll} className="flex-1 py-2.5 rounded-lg font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-all text-sm active:scale-95">Tümünü Sil</button>
                     </div>
                   </div>
                 </div>
