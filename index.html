@@ -70,6 +70,14 @@
             animation: shimmer 1.5s infinite;
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Progress Bar Suyu */
+        .water-fill {
+            background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 50%, #06b6d4 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 3s ease infinite;
+        }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased">
@@ -147,7 +155,7 @@
 
             return (
                 <div className="flex flex-col items-center justify-center bg-white/10 rounded-3xl p-6 shadow-xl border border-white/20 text-white w-full md:w-auto">
-                    <h3 className="text-sm font-bold uppercase tracking-widest mb-4 opacity-90"><i className="fa-regular fa-clock"></i> KAMPANYA SÜRESİ</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-widest mb-4 opacity-90"><i className="fa-regular fa-clock"></i> TATİL SÜRECİ</h3>
                     <div className="flex gap-4 sm:gap-6 text-center">
                         <div className="flex flex-col"><span className="text-4xl sm:text-5xl font-black drop-shadow-md">{days.toString().padStart(2, '0')}</span><span className="text-[10px] sm:text-xs font-bold opacity-80 mt-1 uppercase tracking-wider">GÜN</span></div>
                         <div className="text-3xl sm:text-4xl font-black opacity-50 mt-1">:</div>
