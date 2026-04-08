@@ -44,9 +44,9 @@
         .airplane-flyby {
             position: fixed;
             z-index: 9999;
-            pointer-events: none; /* Uçak geçerken altındaki tıklamaları engellemesin */
+            pointer-events: none;
             animation: flightAnimation 2.5s ease-in-out forwards;
-            color: #0284c7; /* Tailwind blue-600 */
+            color: #0284c7;
             filter: drop-shadow(0 20px 13px rgba(0, 0, 0, 0.3));
         }
     </style>
@@ -54,8 +54,28 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
+    <!-- type="text/babel" data-type="module" kullanarak ES Module ve JSX'i beraber çalıştırıyoruz -->
+    <script type="text/babel" data-type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const { useState, useMemo, useEffect } = React;
+
+        // Firebase Başlatma (Sizin Kendi Ayarlarınız)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCsowA7JoTC_maRfzojfXXdg75OM3HLCsI",
+            authDomain: "tatil-6fcb9.firebaseapp.com",
+            projectId: "tatil-6fcb9",
+            storageBucket: "tatil-6fcb9.firebasestorage.app",
+            messagingSenderId: "234528583159",
+            appId: "1:234528583159:web:4b5dfe518bfa8669b252f2"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "tatil-6fcb9"; // Veritabanındaki ana klasör adınız
 
         // Para formatı için yardımcı fonksiyon
         const formatTL = (amount) => {
@@ -71,47 +91,73 @@
         };
 
         function App() {
-          // Tab State
-          const [activeTab, setActiveTab] = useState('dashboard');
-          
-          // Uçak Animasyon State
-          const [isFlying, setIsFlying] = useState(false);
+          // --- Veritabanı ve Auth State'leri ---
+          const [user, setUser] = useState(null);
+          const [dbStatus, setDbStatus] = useState('loading'); // 'loading', 'connected', 'local', 'error'
+          const [employees, setEmployees] = useState([]); // Liste varsayılan olarak boş başlar, DB'den dolar
 
-          // Dinamik Aylar State'i
+          // --- UI State'leri ---
+          const [activeTab, setActiveTab] = useState('dashboard');
+          const [isFlying, setIsFlying] = useState(false);
           const [months, setMonths] = useState([
             { id: 'm1', name: 'Ocak' },
             { id: 'm2', name: 'Şubat' },
             { id: 'm3', name: 'Mart' }
           ]);
           const [newMonthName, setNewMonthName] = useState('');
-
-          // Hedefler ve Milat Tarihi
           const [targetOld, setTargetOld] = useState(1200000);
           const [targetNew, setTargetNew] = useState(800000);
           const [cutoffDate, setCutoffDate] = useState('2026-01-01');
 
-          // Örnek Veriler (Satışlar artık sales objesi içinde dinamik tutuluyor)
-          const [employees, setEmployees] = useState([
-            { id: 1, office: 'MERKEZ OFİS', name: 'ESKİ PERSONEL 1', entryDate: '2024-05-15', sales: { m1: 900000, m2: 350000, m3: 0 }, returns: 0 },
-            { id: 2, office: 'ŞUBE OFİS', name: 'ESKİ PERSONEL 2', entryDate: '2025-11-20', sales: { m1: 600000, m2: 400000, m3: 100000 }, returns: 50000 },
-            { id: 3, office: 'MERKEZ OFİS', name: 'YENİ PERSONEL 1', entryDate: '2026-02-01', sales: { m1: 500000, m2: 300000, m3: 0 }, returns: 0 },
-            { id: 4, office: 'ŞUBE OFİS', name: 'YENİ PERSONEL 2', entryDate: '2026-03-10', sales: { m1: 400000, m2: 200000, m3: 50000 }, returns: 10000 },
-          ]);
-
-          // Yeni Personel Formu State'leri
-          const [formData, setFormData] = useState({
-            name: '', office: '', entryDate: '', sales: {}, returns: ''
-          });
-          
+          const [formData, setFormData] = useState({ name: '', office: '', entryDate: '', sales: {}, returns: '' });
           const [editingId, setEditingId] = useState(null);
           const [deletingId, setDeletingId] = useState(null);
           const [formError, setFormError] = useState('');
+
+          // --- Firebase Auth (Kullanıcı Oturumu) ---
+          useEffect(() => {
+            const initAuth = async () => {
+              try {
+                await signInAnonymously(auth);
+              } catch(err) {
+                console.error("Yetkilendirme Hatası", err);
+                setDbStatus('error');
+              }
+            };
+            
+            initAuth();
+            const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+            return () => unsubscribe();
+          }, []);
+
+          // --- Firebase Canlı Veri Dinleme ---
+          useEffect(() => {
+            if (!user) return; 
+
+            setDbStatus('loading');
+            const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
+            const q = query(employeesRef);
+            
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+              const data = [];
+              snapshot.forEach(doc => {
+                data.push({ id: doc.id, ...doc.data() });
+              });
+              setEmployees(data);
+              setDbStatus('connected');
+            }, (err) => {
+              console.error("Veri çekme hatası:", err);
+              setDbStatus('error');
+            });
+            
+            return () => unsubscribe();
+          }, [user]);
+
 
           // Tab Değiştirme ve Uçak Animasyonu Yönetimi
           const handleTabChange = (tabName) => {
             if (tabName === 'reports' && activeTab !== 'reports') {
               setIsFlying(true);
-              // Animasyon süresi bitince uçağı kaldır (2.5 saniye)
               setTimeout(() => setIsFlying(false), 2500); 
             }
             setActiveTab(tabName);
@@ -137,12 +183,11 @@
             return empDate >= cutDate;
           };
 
-          // Veri İşleme Fonksiyonu (Dinamik Aylara Göre Toplam Alma)
+          // Veri İşleme Fonksiyonu
           const processData = (isNewType) => {
             return employees
               .filter(emp => isNewEmployee(emp.entryDate) === isNewType)
               .map(emp => {
-                // Sadece aktif ayların satışlarını topla
                 const totalSales = months.reduce((sum, m) => sum + (Number(emp.sales[m.id]) || 0), 0);
                 const netRevenue = totalSales - (Number(emp.returns) || 0);
                 const currentTarget = Number(isNewType ? targetNew : targetOld) || 0;
@@ -188,7 +233,8 @@
             setFormError('');
           };
 
-          const handleFormSubmit = (e) => {
+          // Veri Ekleme / Güncelleme (Firebase'e yazma)
+          const handleFormSubmit = async (e) => {
             e.preventDefault();
             if (!formData.name || !formData.office || !formData.entryDate) {
               setFormError("Lütfen personel adı, ofis ve işe giriş tarihi bilgilerini eksiksiz doldurunuz.");
@@ -196,33 +242,46 @@
               return;
             }
 
-            // Sales objesini temizle ve sayıya çevir
             const cleanSales = {};
             months.forEach(m => { cleanSales[m.id] = Number(formData.sales[m.id]) || 0; });
 
-            if (editingId) {
-              setEmployees(prev => prev.map(emp => emp.id === editingId ? {
-                ...emp,
-                office: formData.office.toUpperCase(), name: formData.name.toUpperCase(), entryDate: formData.entryDate,
-                sales: cleanSales, returns: Number(formData.returns) || 0,
-              } : emp));
-              setEditingId(null);
-            } else {
-              const newEmp = {
-                id: Date.now(),
-                office: formData.office.toUpperCase(), name: formData.name.toUpperCase(), entryDate: formData.entryDate,
-                sales: cleanSales, returns: Number(formData.returns) || 0,
-              };
-              setEmployees(prev => [...prev, newEmp]);
+            const payload = {
+              office: formData.office.toUpperCase(), 
+              name: formData.name.toUpperCase(), 
+              entryDate: formData.entryDate,
+              sales: cleanSales, 
+              returns: Number(formData.returns) || 0,
+            };
+
+            const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
+            try {
+              if (editingId) {
+                await setDoc(doc(employeesRef, editingId.toString()), payload);
+              } else {
+                const newId = Date.now().toString();
+                await setDoc(doc(employeesRef, newId), payload);
+              }
+            } catch (err) {
+              console.error("Veri kaydetme hatası", err);
+              setFormError("Veri kaydedilirken hata oluştu. Lütfen bağlantınızı kontrol edin.");
             }
+
+            setEditingId(null);
             setFormData({ name: '', office: '', entryDate: '', sales: {}, returns: '' });
             setFormError('');
           };
 
           const handleDeleteClick = (id) => setDeletingId(id);
-          const confirmDelete = () => {
+
+          // Veri Silme (Firebase'den silme)
+          const confirmDelete = async () => {
             if (deletingId) {
-              setEmployees(prev => prev.filter(emp => emp.id !== deletingId));
+              const employeesRef = collection(db, 'artifacts', appId, 'public', 'data', 'employees');
+              try {
+                await deleteDoc(doc(employeesRef, deletingId.toString()));
+              } catch (err) {
+                console.error("Veri silme hatası", err);
+              }
               setDeletingId(null);
             }
           };
@@ -261,10 +320,8 @@
               className="min-h-screen print:bg-white text-slate-800 font-sans pb-20 relative bg-cover bg-center bg-fixed"
               style={{ backgroundImage: "url('https://images.unsplash.com/photo-1506929562872-bb421503ef21?q=80&w=2068&auto=format&fit=crop')" }}
             >
-              {/* Arka plan görselinin çok göz yormaması için yarı saydam ve hafif bulanık bir katman (Overlay) */}
               <div className="absolute inset-0 bg-slate-100/70 backdrop-blur-[6px] -z-10 print:hidden"></div>
               
-              {/* Uçak Animasyonu Katmanı */}
               {isFlying && (
                 <div className="airplane-flyby">
                   <i className="fa-solid fa-plane text-8xl"></i>
@@ -279,7 +336,12 @@
                     </div>
                     <div>
                       <h1 className="text-xl font-bold text-slate-900 leading-tight">İhlas Pazarlama</h1>
-                      <p className="text-xs text-slate-500">Antalya Tatili Takip Sistemi</p>
+                      <p className="text-xs text-slate-500 flex items-center gap-2">
+                        Antalya Tatili Takip Sistemi
+                        {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Çevrimiçi Bağlandı</span>}
+                        {dbStatus === 'loading' && <span className="flex items-center gap-1 text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full"><i className="fa-solid fa-spinner fa-spin"></i> Bağlanıyor...</span>}
+                        {dbStatus === 'error' && <span className="flex items-center gap-1 text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full"><i className="fa-solid fa-circle-xmark"></i> Bağlantı Hatası</span>}
+                      </p>
                     </div>
                   </div>
                   
@@ -442,7 +504,7 @@
                                   <i className="fa-solid fa-xmark text-base"></i> İptal
                                 </button>
                               )}
-                              <button type="submit" disabled={months.length === 0} className={`text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 shadow-md ${months.length === 0 ? 'bg-slate-400 cursor-not-allowed' : (editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800')}`}>
+                              <button type="submit" disabled={months.length === 0 || dbStatus === 'error'} className={`text-white px-6 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 shadow-md ${(months.length === 0 || dbStatus === 'error') ? 'bg-slate-400 cursor-not-allowed' : (editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800')}`}>
                                 {editingId ? <i className="fa-solid fa-pen-to-square text-base"></i> : <i className="fa-solid fa-plus text-base"></i>}
                                 {editingId ? 'Güncelle' : 'Listeye Ekle'}
                               </button>
