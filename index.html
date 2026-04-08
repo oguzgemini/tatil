@@ -41,9 +41,6 @@
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Canvas Confetti -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
     <!-- PWA Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
@@ -104,7 +101,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, query, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const { useState, useMemo, useEffect } = React;
+        const { useState, useMemo, useEffect, useRef } = React;
 
         // --- Firebase Başlatma ---
         const firebaseConfig = {
@@ -285,9 +282,16 @@
           const [employees, setEmployees] = useState([]); 
           const [archives, setArchives] = useState([]);
 
+          // --- ADMIN YETKİLENDİRME STATE'LERİ ---
+          const [isAdmin, setIsAdmin] = useState(false);
+          const [showAdminLogin, setShowAdminLogin] = useState(false);
+          const [adminPasswordInput, setAdminPasswordInput] = useState('');
+          const [adminError, setAdminError] = useState('');
+
           // UI States
           const [activeTab, setActiveTab] = useState('dashboard');
-          const [isFlying, setIsFlying] = useState(false);
+          const [flightKey, setFlightKey] = useState(0);
+          const flightTimeoutRef = useRef(null);
           const [isModalOpen, setIsModalOpen] = useState(false);
           const [isDeletingAll, setIsDeletingAll] = useState(false);
           const [settingsSaved, setSettingsSaved] = useState(false);
@@ -385,25 +389,27 @@
             return () => unsubscribe();
           }, [user]);
 
-          const fireConfetti = () => {
-            if (typeof confetti !== 'undefined') {
-                playSound('cheer');
-                const end = Date.now() + 3000;
-                const frame = () => {
-                    confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#2dd4bf', '#f59e0b', '#0ea5e9'] });
-                    confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#2dd4bf', '#f59e0b', '#0ea5e9'] });
-                    if (Date.now() < end) requestAnimationFrame(frame);
-                };
-                frame();
+          // --- ADMIN GİRİŞ İŞLEMİ ---
+          const handleAdminLoginSubmit = (e) => {
+            e.preventDefault();
+            // Basit Admin Şifresi Koruması
+            if (adminPasswordInput === '190546') {
+                setIsAdmin(true);
+                setShowAdminLogin(false);
+                setAdminPasswordInput('');
+                setAdminError('');
+            } else {
+                setAdminError('Hatalı şifre girdiniz.');
             }
           };
 
           const handleTabChange = (tabName) => {
-            if ((tabName === 'reports' || tabName === 'archives') && activeTab !== tabName) {
-              setIsFlying(true); 
+            if (activeTab !== tabName) {
+              setFlightKey(Date.now()); // Her tıklamada benzersiz ID vererek animasyonu sıfırlar
               playSound('swoosh');
-              setTimeout(() => setIsFlying(false), 2500); 
-              if(tabName === 'reports') setTimeout(() => fireConfetti(), 800);
+              
+              if (flightTimeoutRef.current) clearTimeout(flightTimeoutRef.current);
+              flightTimeoutRef.current = setTimeout(() => setFlightKey(0), 2500);
             }
             setActiveTab(tabName); 
             setSelectedArchive(null); // Arşiv sekmesine geçerken detay görünümünü sıfırla
@@ -484,7 +490,6 @@
             e.preventDefault();
             if (!archiveMonth || !archiveYear || employees.length === 0) return;
             
-            // Verileri tam haliyle donduruyoruz (Gelecekte hedef değişse de bozulmaz)
             const archiveData = {
                 month: archiveMonth,
                 year: archiveYear,
@@ -501,13 +506,13 @@
                 // 1. Arşive Ekle
                 await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', 'archives'), Date.now().toString()), archiveData);
                 
-                // 2. Mevcut Kayıtları Sil (Yeni döneme hazırlık)
+                // 2. Mevcut Kayıtları Sil
                 const promises = employees.map(emp => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'employees', emp.id.toString())));
                 await Promise.all(promises);
                 
                 setIsArchiveModalOpen(false);
                 setArchiveMonth('');
-                handleTabChange('archives'); // Arşivler sekmesine geçiş
+                handleTabChange('archives');
             } catch(err) {
                 console.error("Arşivleme hatası:", err);
             }
@@ -551,7 +556,7 @@
                 await setDoc(doc(employeesRef, Date.now().toString()), payload);
                 const tempNet = Object.values(cleanSales).reduce((a,b)=>a+b,0) - (Number(formData.returns)||0);
                 if((isNewEmployee(formData.entryDate) ? targetNew : targetOld) > 0 && tempNet >= (isNewEmployee(formData.entryDate) ? targetNew : targetOld)) {
-                    playSound('cheer'); setTimeout(()=>fireConfetti(), 300);
+                    playSound('cheer');
                 }
               }
               setIsModalOpen(false);
@@ -588,7 +593,7 @@
             <div className="min-h-screen print:bg-white text-slate-800 font-sans pb-24 relative bg-cover bg-center bg-fixed transition-all duration-1000" style={{ backgroundImage: bgImageUrl }}>
               <div className={`absolute inset-0 -z-10 print:hidden transition-all duration-1000 ${overlayClass}`}></div>
               
-              {isFlying && <div className="airplane-flyby"><i className="fa-solid fa-plane text-6xl sm:text-8xl drop-shadow-xl text-white"></i></div>}
+              {flightKey !== 0 && <div key={flightKey} className="airplane-flyby"><i className="fa-solid fa-plane text-6xl sm:text-8xl drop-shadow-xl text-white"></i></div>}
 
               {/* Üst Navigasyon & Atmosfer Paneli */}
               <div className={`border-b sticky top-0 z-40 print:hidden transition-colors duration-1000 shadow-lg ${isNightMode ? 'bg-slate-900/80 border-slate-700/50' : 'bg-white/10 backdrop-blur-xl border-white/20'}`}>
@@ -600,10 +605,16 @@
                         </div>
                         <div>
                           <h1 className={`text-xl font-extrabold leading-tight tracking-tight drop-shadow-md ${isNightMode ? 'text-white' : 'text-white sm:text-slate-800'}`}>İhlas Pazarlama</h1>
-                          <p className={`text-xs font-bold flex items-center gap-2 uppercase tracking-widest drop-shadow-md ${isNightMode ? 'text-indigo-200' : 'text-cyan-100 sm:text-cyan-600'}`}>
-                            Antalya Tatili 
-                            {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[9px] bg-emerald-500/80 text-white px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span> Çevrimiçi</span>}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className={`text-xs font-bold flex items-center gap-2 uppercase tracking-widest drop-shadow-md ${isNightMode ? 'text-indigo-200' : 'text-cyan-100 sm:text-cyan-600'}`}>
+                                Antalya Tatili 
+                                {dbStatus === 'connected' && <span className="flex items-center gap-1 text-[9px] bg-emerald-500/80 text-white px-2 py-0.5 rounded-full"><span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span></span>}
+                            </p>
+                            {/* Admin Mode Toggle */}
+                            <button onClick={() => isAdmin ? setIsAdmin(false) : setShowAdminLogin(true)} className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-colors border ${isAdmin ? 'bg-amber-500/90 text-white border-amber-400 shadow-md' : (isNightMode ? 'bg-slate-800/80 text-slate-400 border-slate-600 hover:text-white' : 'bg-white/60 text-slate-500 border-slate-300 hover:text-slate-800')}`}>
+                                <i className={`fa-solid ${isAdmin ? 'fa-unlock' : 'fa-lock'}`}></i> {isAdmin ? 'Yönetici Çıkış' : 'Admin'}
+                            </button>
+                          </div>
                         </div>
                       </div>
                       {/* Hava Durumu Widget */}
@@ -668,77 +679,79 @@
                         </div>
                     </div>
 
-                    {/* Ayarlar Paneli */}
-                    <div className={`mb-8 rounded-3xl shadow-xl overflow-hidden transition-all ${isNightMode ? 'bg-slate-800/90 border border-slate-700' : 'bg-white/95 border border-slate-100'}`}>
-                        <button onClick={() => setShowSettings(!showSettings)} className="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-black/5 transition-colors">
-                            <span className={`font-black text-base sm:text-lg flex items-center gap-3 ${isNightMode ? 'text-white' : 'text-slate-700'}`}>
-                                <span className={`p-1.5 rounded-lg ${isNightMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500'}`}><i className="fa-solid fa-sliders text-sm"></i></span> Kampanya Kuralları & Ayarlar
-                            </span>
-                            <i className={`fa-solid fa-chevron-down text-slate-400 transition-transform duration-300 ${showSettings ? 'rotate-180' : ''}`}></i>
-                        </button>
-                        
-                        {showSettings && (
-                            <div className="animate-slide-up">
-                                <div className={`p-5 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6 ${isNightMode ? 'border-slate-700' : 'border-slate-100'}`}>
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-500/30 pb-1.5">Hedef Tutarları</h4>
-                                        <div className="flex gap-3">
-                                            <div className="flex-1">
-                                                <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1">ESKİ PERSONEL</label>
-                                                <div className="relative">
-                                                    <input type="text" inputMode="numeric" value={targetOld===0?'':formatInputNumber(targetOld)} onChange={e=>setTargetOld(parseInputNumber(e.target.value))} className={`w-full pl-3 pr-8 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode?'bg-slate-900 text-white focus:ring-indigo-500':'bg-slate-50 text-slate-700 focus:ring-cyan-500'}`} />
-                                                    <span className="absolute right-3 top-2 text-slate-400 font-bold text-sm">₺</span>
+                    {/* Admin Ayarlar Paneli (SADECE ADMİN GÖREBİLİR) */}
+                    {isAdmin && (
+                        <div className={`mb-8 rounded-3xl shadow-xl overflow-hidden transition-all border-2 ${isNightMode ? 'bg-slate-800/90 border-amber-500/30' : 'bg-white/95 border-amber-400/40'}`}>
+                            <button onClick={() => setShowSettings(!showSettings)} className="w-full flex items-center justify-between p-4 sm:p-5 text-left hover:bg-black/5 transition-colors">
+                                <span className={`font-black text-base sm:text-lg flex items-center gap-3 ${isNightMode ? 'text-white' : 'text-slate-700'}`}>
+                                    <span className={`p-1.5 rounded-lg bg-amber-500 text-white shadow-md`}><i className="fa-solid fa-sliders text-sm"></i></span> Yönetici Ayarları & Kampanya Kuralları
+                                </span>
+                                <i className={`fa-solid fa-chevron-down text-slate-400 transition-transform duration-300 ${showSettings ? 'rotate-180' : ''}`}></i>
+                            </button>
+                            
+                            {showSettings && (
+                                <div className="animate-slide-up">
+                                    <div className={`p-5 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6 ${isNightMode ? 'border-slate-700' : 'border-slate-100'}`}>
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-500/30 pb-1.5">Hedef Tutarları</h4>
+                                            <div className="flex gap-3">
+                                                <div className="flex-1">
+                                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1">ESKİ PERSONEL</label>
+                                                    <div className="relative">
+                                                        <input type="text" inputMode="numeric" value={targetOld===0?'':formatInputNumber(targetOld)} onChange={e=>setTargetOld(parseInputNumber(e.target.value))} className={`w-full pl-3 pr-8 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode?'bg-slate-900 text-white focus:ring-amber-500':'bg-slate-50 text-slate-700 focus:ring-amber-500 border border-slate-200'}`} />
+                                                        <span className="absolute right-3 top-2 text-slate-400 font-bold text-sm">₺</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1">YENİ PERSONEL</label>
+                                                    <div className="relative">
+                                                        <input type="text" inputMode="numeric" value={targetNew===0?'':formatInputNumber(targetNew)} onChange={e=>setTargetNew(parseInputNumber(e.target.value))} className={`w-full pl-3 pr-8 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode?'bg-slate-900 text-white focus:ring-amber-500':'bg-slate-50 text-slate-700 focus:ring-amber-500 border border-slate-200'}`} />
+                                                        <span className="absolute right-3 top-2 text-slate-400 font-bold text-sm">₺</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex-1">
-                                                <label className="block text-[10px] font-bold text-slate-500 mb-1 ml-1">YENİ PERSONEL</label>
-                                                <div className="relative">
-                                                    <input type="text" inputMode="numeric" value={targetNew===0?'':formatInputNumber(targetNew)} onChange={e=>setTargetNew(parseInputNumber(e.target.value))} className={`w-full pl-3 pr-8 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode?'bg-slate-900 text-white focus:ring-indigo-500':'bg-slate-50 text-slate-700 focus:ring-cyan-500'}`} />
-                                                    <span className="absolute right-3 top-2 text-slate-400 font-bold text-sm">₺</span>
-                                                </div>
+                                            <div className="pt-1">
+                                                <label className="block text-[10px] font-bold text-amber-600 mb-1">YENİ PERSONEL MİLADI</label>
+                                                <input type="date" value={cutoffDate} onChange={e=>setCutoffDate(e.target.value)} className={`w-full px-3 py-2 rounded-lg font-bold outline-none text-sm ${isNightMode?'bg-amber-900/30 text-amber-400 border border-amber-900/50':'bg-amber-50 text-amber-800 border border-amber-200'}`} />
                                             </div>
                                         </div>
-                                        <div className="pt-1">
-                                            <label className="block text-[10px] font-bold text-amber-500 mb-1">YENİ PERSONEL MİLADI</label>
-                                            <input type="date" value={cutoffDate} onChange={e=>setCutoffDate(e.target.value)} className={`w-full px-3 py-2 rounded-lg font-bold outline-none text-sm ${isNightMode?'bg-amber-900/30 text-amber-400':'bg-amber-50 text-amber-800'}`} />
+                                        <div className="space-y-4">
+                                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-500/30 pb-1.5">Geçerli Aylar</h4>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {months.map(m => (
+                                                    <span key={m.id} className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1.5 border ${isNightMode?'bg-indigo-900/30 text-indigo-300 border-indigo-700':'bg-cyan-50 text-cyan-700 border-cyan-100'}`}>
+                                                    {m.name} <button onClick={()=>handleRemoveMonth(m.id)} className="hover:text-rose-500"><i className="fa-solid fa-circle-xmark"></i></button>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input type="text" value={newMonthName} onChange={e=>setNewMonthName(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleAddMonth()} placeholder="Yeni ay ekle" className={`flex-1 px-3 py-2 rounded-lg outline-none text-sm font-medium ${isNightMode?'bg-slate-900 text-white':'bg-slate-50 text-slate-700 border border-slate-200'}`} />
+                                                <button onClick={handleAddMonth} className={`text-white px-3 rounded-lg font-bold transition-colors ${isNightMode?'bg-amber-600 hover:bg-amber-700':'bg-amber-500 hover:bg-amber-600 shadow-md'}`}><i className="fa-solid fa-plus"></i></button>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-4">
-                                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-500/30 pb-1.5">Geçerli Aylar</h4>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {months.map(m => (
-                                                <span key={m.id} className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1.5 border ${isNightMode?'bg-indigo-900/30 text-indigo-300 border-indigo-700':'bg-cyan-50 text-cyan-700 border-cyan-100'}`}>
-                                                {m.name} <button onClick={()=>handleRemoveMonth(m.id)} className="hover:text-rose-500"><i className="fa-solid fa-circle-xmark"></i></button>
-                                                </span>
-                                            ))}
+                                    
+                                    {/* Ayarlar Kaydet, Temizle & Arşivle Bölümü */}
+                                    <div className={`p-5 mt-2 border-t flex flex-col lg:flex-row justify-between items-center gap-4 ${isNightMode ? 'bg-slate-900/50 border-slate-700' : 'bg-slate-50/50 border-slate-200'}`}>
+                                        <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-2">
+                                            <button onClick={() => setIsDeletingAll(true)} className="text-xs font-bold text-rose-500 hover:text-rose-700 flex items-center justify-center gap-1.5 transition-colors p-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20">
+                                                <i className="fa-solid fa-trash-can"></i> Tümünü Temizle
+                                            </button>
+                                            <button onClick={() => setIsArchiveModalOpen(true)} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center justify-center gap-1.5 transition-colors p-2.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20">
+                                                <i className="fa-solid fa-box-archive"></i> Verileri Arşivle
+                                            </button>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <input type="text" value={newMonthName} onChange={e=>setNewMonthName(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleAddMonth()} placeholder="Yeni ay ekle" className={`flex-1 px-3 py-2 rounded-lg outline-none text-sm font-medium ${isNightMode?'bg-slate-900 text-white':'bg-slate-50 text-slate-700'}`} />
-                                            <button onClick={handleAddMonth} className={`text-white px-3 rounded-lg font-bold transition-colors ${isNightMode?'bg-indigo-600 hover:bg-indigo-700':'bg-cyan-600 hover:bg-cyan-700'}`}><i className="fa-solid fa-plus"></i></button>
+                                        <div className="flex items-center gap-3 w-full lg:w-auto">
+                                            {settingsSaved && <span className="text-xs font-bold text-emerald-500 animate-fade-in flex items-center gap-1"><i className="fa-solid fa-circle-check"></i> Kaydedildi!</span>}
+                                            <button onClick={handleSaveSettings} disabled={dbStatus !== 'connected'} className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 ${dbStatus === 'connected' ? (isNightMode?'bg-amber-600 hover:bg-amber-700 text-white':'bg-amber-500 text-white hover:bg-amber-600 shadow-md shadow-amber-500/30 active:scale-95') : 'bg-slate-600 text-slate-400 cursor-not-allowed'}`}>
+                                                <i className="fa-solid fa-cloud-arrow-up"></i> Ayarları Kaydet
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                {/* Ayarlar Kaydet, Temizle & Arşivle Bölümü */}
-                                <div className={`p-5 mt-2 border-t flex flex-col lg:flex-row justify-between items-center gap-4 ${isNightMode ? 'bg-slate-900/50 border-slate-700' : 'bg-slate-50/50 border-slate-100'}`}>
-                                    <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-2">
-                                        <button onClick={() => setIsDeletingAll(true)} className="text-xs font-bold text-rose-500 hover:text-rose-700 flex items-center justify-center gap-1.5 transition-colors p-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20">
-                                            <i className="fa-solid fa-trash-can"></i> Tümünü Temizle
-                                        </button>
-                                        <button onClick={() => setIsArchiveModalOpen(true)} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center justify-center gap-1.5 transition-colors p-2.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20">
-                                            <i className="fa-solid fa-box-archive"></i> Verileri Arşivle
-                                        </button>
-                                    </div>
-                                    <div className="flex items-center gap-3 w-full lg:w-auto">
-                                        {settingsSaved && <span className="text-xs font-bold text-emerald-500 animate-fade-in flex items-center gap-1"><i className="fa-solid fa-circle-check"></i> Kaydedildi!</span>}
-                                        <button onClick={handleSaveSettings} disabled={dbStatus !== 'connected'} className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 ${dbStatus === 'connected' ? (isNightMode?'bg-indigo-600 hover:bg-indigo-700 text-white':'bg-cyan-600 text-white hover:bg-cyan-700 shadow-md shadow-cyan-600/20 active:scale-95') : 'bg-slate-600 text-slate-400 cursor-not-allowed'}`}>
-                                            <i className="fa-solid fa-cloud-arrow-up"></i> Ayarları Kaydet
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Tablolar ve Liderlik Podyumları */}
                     <div className="space-y-8">
@@ -765,10 +778,12 @@
                       </div>
                     </div>
 
-                    {/* Yüzen Ekleme Butonu (FAB) */}
-                    <button onClick={openAddModal} className={`fixed bottom-6 right-6 sm:bottom-10 sm:right-10 w-14 h-14 rounded-full shadow-xl text-white flex items-center justify-center text-xl hover:scale-110 active:scale-95 transition-all z-40 animate-slide-up border border-white/20 ${isNightMode ? 'bg-indigo-600 shadow-indigo-900/50' : 'bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/40'}`}>
-                        <i className="fa-solid fa-user-plus"></i>
-                    </button>
+                    {/* Yüzen Ekleme Butonu (FAB) - SADECE ADMİN GÖREBİLİR */}
+                    {isAdmin && (
+                        <button onClick={openAddModal} className={`fixed bottom-6 right-6 sm:bottom-10 sm:right-10 w-14 h-14 rounded-full shadow-xl text-white flex items-center justify-center text-xl hover:scale-110 active:scale-95 transition-all z-40 animate-slide-up border border-white/20 ${isNightMode ? 'bg-amber-600 shadow-amber-900/50' : 'bg-gradient-to-r from-amber-400 to-orange-500 shadow-amber-500/40'}`}>
+                            <i className="fa-solid fa-user-plus"></i>
+                        </button>
+                    )}
                   </div>
                 )}
 
@@ -821,7 +836,7 @@
                             <div className={`p-12 rounded-3xl text-center border-dashed border-2 ${isNightMode ? 'border-slate-700 bg-slate-800/50 text-slate-400' : 'border-slate-300 bg-white/50 text-slate-500'}`}>
                                 <i className="fa-solid fa-folder-open text-6xl mb-4 opacity-30"></i>
                                 <p className="font-bold text-lg">Henüz arşivlenmiş bir kayıt bulunmuyor.</p>
-                                <p className="text-sm mt-2 opacity-70">Ana sayfadan "Verileri Arşivle" butonu ile yeni arşiv oluşturabilirsiniz.</p>
+                                <p className="text-sm mt-2 opacity-70">Admin moduna geçerek ana sayfadan yeni arşiv oluşturabilirsiniz.</p>
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
@@ -889,6 +904,36 @@
                   </div>
                 )}
               </div>
+
+              {/* --- ADMİN GİRİŞ MODALI --- */}
+              {showAdminLogin && (
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-[60] animate-fade-in print:hidden">
+                    <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border ${isNightMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100'}`}>
+                        <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                            <h2 className="text-lg font-black flex items-center gap-2">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isNightMode ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-600'}`}><i className="fa-solid fa-lock text-sm"></i></div>
+                                Yönetici Girişi
+                            </h2>
+                            <button onClick={()=>setShowAdminLogin(false)} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${isNightMode ? 'bg-slate-700 hover:bg-rose-900 text-slate-300' : 'bg-white hover:bg-rose-50 text-slate-400'}`}><i className="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <form onSubmit={handleAdminLoginSubmit}>
+                            <div className="p-6">
+                                <p className="opacity-70 text-xs font-medium leading-relaxed mb-5 text-center">Ayarları değiştirmek ve kişileri düzenlemek için yönetici şifrenizi girin.</p>
+                                
+                                {adminError && <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-xs font-bold text-center animate-pulse"><i className="fa-solid fa-circle-xmark mr-1.5"></i> {adminError}</div>}
+
+                                <div>
+                                    <input required type="password" placeholder="Şifre" value={adminPasswordInput} onChange={e=>setAdminPasswordInput(e.target.value)} className={`w-full px-4 py-3 rounded-xl outline-none font-bold text-center tracking-widest text-lg transition-colors ${isNightMode ? 'bg-slate-900 text-white focus:ring-2 focus:ring-amber-500 border border-slate-700' : 'bg-slate-50 text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-400 border border-slate-200'}`} />
+                                </div>
+                            </div>
+                            <div className={`p-4 border-t flex gap-2 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                <button type="button" onClick={() => setShowAdminLogin(false)} className={`flex-1 py-3 rounded-xl font-bold transition-all text-sm ${isNightMode ? 'bg-slate-800 hover:bg-slate-700 text-white' : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-600'}`}>İptal</button>
+                                <button type="submit" className={`flex-1 py-3 rounded-xl font-bold text-white shadow-md transition-all text-sm active:scale-95 ${isNightMode ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/20' : 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30'}`}>Giriş Yap</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+              )}
 
               {/* --- YOLCU DETAY PANELI --- */}
               {selectedProfile && (
@@ -970,22 +1015,24 @@
                             </div>
                         </div>
 
-                        {/* Aksiyon Butonları */}
-                        <div className={`p-4 border-t flex gap-2 shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                            <button onClick={()=>{ handleDeleteClick(selectedProfile.id); }} className={`flex-1 py-3 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 ${isNightMode ? 'bg-slate-800 text-rose-400 hover:bg-slate-700' : 'bg-white text-rose-500 border border-slate-200 hover:bg-rose-50'}`}><i className="fa-solid fa-trash"></i> Sil</button>
-                            <button onClick={()=>{ handleEdit(selectedProfile); }} className={`flex-[2] py-3 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 text-white shadow-md active:scale-95 ${isNightMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-cyan-600 hover:bg-cyan-700'}`}><i className="fa-solid fa-pen"></i> Bilgileri Güncelle</button>
-                        </div>
+                        {/* Aksiyon Butonları (SADECE ADMIN GÖREBİLİR) */}
+                        {isAdmin && (
+                            <div className={`p-4 border-t flex gap-2 shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                <button onClick={()=>{ handleDeleteClick(selectedProfile.id); }} className={`flex-1 py-3 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 ${isNightMode ? 'bg-slate-800 text-rose-400 hover:bg-slate-700' : 'bg-white text-rose-500 border border-slate-200 hover:bg-rose-50'}`}><i className="fa-solid fa-trash"></i> Sil</button>
+                                <button onClick={()=>{ handleEdit(selectedProfile); }} className={`flex-[2] py-3 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 text-white shadow-md active:scale-95 ${isNightMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-amber-500 hover:bg-amber-600'}`}><i className="fa-solid fa-pen"></i> Bilgileri Güncelle</button>
+                            </div>
+                        )}
                     </div>
                 </div>
               )}
 
               {/* --- YENİ/DÜZENLE FORM MODALI --- */}
-              {isModalOpen && (
+              {isModalOpen && isAdmin && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
                     <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-xl overflow-hidden animate-slide-up flex flex-col max-h-[90vh] ${isNightMode ? 'bg-slate-800 text-white border border-slate-700' : 'bg-white'}`}>
                         <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                             <h2 className="text-lg font-black flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isNightMode ? 'bg-indigo-600 text-white' : 'bg-cyan-100 text-cyan-600'}`}><i className="fa-solid fa-id-card-clip text-sm"></i></div>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isNightMode ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-600'}`}><i className="fa-solid fa-id-card-clip text-sm"></i></div>
                                 {editingId ? 'Yolcu Güncelle' : 'Yeni Yolcu Ekle'}
                             </h2>
                             <button onClick={()=>setIsModalOpen(false)} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${isNightMode ? 'bg-slate-700 hover:bg-rose-900 text-slate-300' : 'bg-white hover:bg-rose-50 text-slate-400'}`}><i className="fa-solid fa-xmark"></i></button>
@@ -998,25 +1045,25 @@
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wide ml-1">Ad Soyad</label>
-                                        <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-indigo-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 border border-slate-200'}`} />
+                                        <input name="name" value={formData.name} onChange={handleInputChange} type="text" placeholder="Örn: Ahmet Yılmaz" className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-amber-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-amber-500 border border-slate-200'}`} />
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wide ml-1">Ofis</label>
-                                        <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-indigo-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 border border-slate-200'}`} />
+                                        <input name="office" value={formData.office} onChange={handleInputChange} type="text" placeholder="Örn: Yıldız Ofis" className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-amber-500' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-amber-500 border border-slate-200'}`} />
                                     </div>
                                 </div>
                                 <div>
                                     <label className="block text-[10px] font-bold opacity-70 mb-1 uppercase tracking-wide ml-1">İPAŞ Giriş Tarihi</label>
-                                    <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-indigo-500 text-slate-300' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500 border border-slate-200'}`} />
+                                    <input type="date" name="entryDate" value={formData.entryDate} onChange={handleInputChange} className={`w-full px-3 py-2.5 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-900 focus:ring-amber-500 text-slate-300' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-amber-500 border border-slate-200'}`} />
                                 </div>
                                 
                                 <div className={`p-4 rounded-xl ${isNightMode ? 'bg-slate-900/50 border border-slate-700' : 'bg-slate-50/50 border border-slate-100'}`}>
-                                    <label className={`block text-[10px] font-bold mb-3 uppercase tracking-widest ${isNightMode ? 'text-indigo-400' : 'text-cyan-600'}`}><i className="fa-solid fa-chart-line mr-1"></i> Aylık Satış Performansı</label>
+                                    <label className={`block text-[10px] font-bold mb-3 uppercase tracking-widest ${isNightMode ? 'text-amber-500' : 'text-amber-600'}`}><i className="fa-solid fa-chart-line mr-1"></i> Aylık Satış Performansı</label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                         {months.map(m => (
                                             <div key={m.id}>
                                                 <label className="block text-[9px] font-bold opacity-60 mb-1 ml-1">{m.name} (TL)</label>
-                                                <input type="text" inputMode="numeric" value={formData.sales[m.id]?formatInputNumber(formData.sales[m.id]):''} onChange={e=>handleSalesChange(m.id, e.target.value)} placeholder="0" className={`w-full px-3 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-800 focus:ring-indigo-500' : 'bg-white focus:ring-2 focus:ring-cyan-500 border border-slate-200'}`} />
+                                                <input type="text" inputMode="numeric" value={formData.sales[m.id]?formatInputNumber(formData.sales[m.id]):''} onChange={e=>handleSalesChange(m.id, e.target.value)} placeholder="0" className={`w-full px-3 py-2 rounded-lg outline-none font-bold text-sm ${isNightMode ? 'bg-slate-800 focus:ring-amber-500' : 'bg-white focus:ring-2 focus:ring-amber-500 border border-slate-200'}`} />
                                             </div>
                                         ))}
                                     </div>
@@ -1031,7 +1078,7 @@
 
                         <div className={`p-5 border-t flex gap-2 shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                             <button onClick={()=>setIsModalOpen(false)} className={`flex-1 py-2.5 rounded-lg font-bold transition-all text-sm ${isNightMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-white border border-slate-200 hover:bg-slate-100 text-slate-600'}`}>İptal</button>
-                            <button form="employeeForm" type="submit" disabled={months.length===0} className={`flex-[2] py-2.5 rounded-lg font-bold text-white transition-all flex items-center justify-center gap-1.5 text-sm active:scale-95 ${months.length===0 ? 'opacity-50 cursor-not-allowed bg-slate-500' : (isNightMode ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gradient-to-r from-cyan-500 to-blue-600 shadow-md')}`}>
+                            <button form="employeeForm" type="submit" disabled={months.length===0} className={`flex-[2] py-2.5 rounded-lg font-bold text-white transition-all flex items-center justify-center gap-1.5 text-sm active:scale-95 ${months.length===0 ? 'opacity-50 cursor-not-allowed bg-slate-500' : (isNightMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-md')}`}>
                                 <i className="fa-solid fa-floppy-disk"></i> {editingId ? 'Güncelle' : 'Kaydet'}
                             </button>
                         </div>
@@ -1039,8 +1086,8 @@
                 </div>
               )}
 
-              {/* --- ARŞİV OLUŞTURMA MODALI --- */}
-              {isArchiveModalOpen && (
+              {/* --- ARŞİV OLUŞTURMA MODALI (SADECE ADMIN) --- */}
+              {isArchiveModalOpen && isAdmin && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
                     <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border ${isNightMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100'}`}>
                         <div className={`p-5 border-b flex justify-between items-center shrink-0 ${isNightMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
@@ -1092,7 +1139,7 @@
               )}
 
               {/* Silme Onay Modalı */}
-              {deletingId && (
+              {deletingId && isAdmin && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
                   <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border ${isNightMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100'}`}>
                     <div className="p-6 text-center">
@@ -1109,7 +1156,7 @@
               )}
 
               {/* Tümünü Temizle Onay Modalı */}
-              {isDeletingAll && (
+              {isDeletingAll && isAdmin && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in print:hidden">
                   <div className={`rounded-[1.5rem] shadow-2xl w-full max-w-sm overflow-hidden animate-slide-up border ${isNightMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100'}`}>
                     <div className="p-6 text-center">
