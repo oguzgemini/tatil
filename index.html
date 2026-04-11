@@ -314,6 +314,9 @@
 
           // Tema Ayarı
           const [isNightMode, setIsNightMode] = useState(false);
+          
+          // Canlı Hava Durumu Ayarı
+          const [weather, setWeather] = useState({ temp: null, desc: '', icon: '' });
 
           // Settings
           const [months, setMonths] = useState([{ id: 'm1', name: 'Ocak' }, { id: 'm2', name: 'Şubat' }, { id: 'm3', name: 'Mart' }]);
@@ -338,6 +341,58 @@
               checkTime();
               const timer = setInterval(checkTime, 60000);
               return () => clearInterval(timer);
+          }, []);
+
+          // Canlı Hava Durumu Çekimi (Open-Meteo)
+          useEffect(() => {
+              const fetchWeather = async () => {
+                  const CACHE_KEY = 'antalya_weather_data';
+                  const CACHE_TIME_KEY = 'antalya_weather_time';
+                  const cacheTime = localStorage.getItem(CACHE_TIME_KEY);
+                  const now = new Date().getTime();
+
+                  // Cache'i kontrol et. 3 saat (10800000 ms) geçmediyse cache'den kullan
+                  if (cacheTime && (now - parseInt(cacheTime) < 10800000)) {
+                      const cachedData = localStorage.getItem(CACHE_KEY);
+                      if (cachedData) {
+                          setWeather(JSON.parse(cachedData));
+                          return;
+                      }
+                  }
+
+                  try {
+                      // Antalya için Open-Meteo üzerinden veri çek
+                      const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.9081&longitude=30.6956&current=temperature_2m,weather_code,is_day&timezone=Europe%2FIstanbul');
+                      const data = await res.json();
+                      const temp = Math.round(data.current.temperature_2m);
+                      const code = data.current.weather_code;
+                      const isDay = data.current.is_day;
+
+                      let desc = 'Güneşli';
+                      let icon = isDay ? '☀️' : '🌙';
+
+                      // WMO Hava Durumu Yorumlama Kodları
+                      if (code === 0) { desc = isDay ? 'Güneşli' : 'Açık'; icon = isDay ? '☀️' : '🌙'; }
+                      else if (code === 1 || code === 2) { desc = isDay ? 'Az Bulutlu' : 'Açık'; icon = isDay ? '🌤️' : '☁️'; }
+                      else if (code === 3) { desc = 'Çok Bulutlu'; icon = '☁️'; }
+                      else if (code >= 45 && code <= 48) { desc = 'Sisli'; icon = '🌫️'; }
+                      else if (code >= 51 && code <= 55) { desc = 'Çisenti'; icon = '🌧️'; }
+                      else if (code >= 61 && code <= 65) { desc = 'Yağmurlu'; icon = '🌧️'; }
+                      else if (code >= 71 && code <= 77) { desc = 'Kar Yağışlı'; icon = '❄️'; }
+                      else if (code >= 95) { desc = 'Fırtınalı'; icon = '⛈️'; }
+
+                      const weatherData = { temp, desc, icon };
+                      setWeather(weatherData);
+                      
+                      // Önbelleğe kaydet
+                      localStorage.setItem(CACHE_KEY, JSON.stringify(weatherData));
+                      localStorage.setItem(CACHE_TIME_KEY, now.toString());
+                  } catch (err) {
+                      console.error("Hava durumu çekilirken bir sorun oluştu", err);
+                  }
+              };
+
+              fetchWeather();
           }, []);
 
           const uniqueOffices = useMemo(() => {
@@ -633,10 +688,14 @@
                           </div>
                         </div>
                       </div>
-                      {/* Hava Durumu Widget */}
+                      {/* Hava Durumu Widget (Güncel Veri) */}
                       <div className={`hidden md:flex flex-col items-end text-sm font-bold ${isNightMode ? 'text-slate-300' : 'text-white sm:text-slate-600'}`}>
                           <span><i className="fa-solid fa-location-dot"></i> Antalya</span>
-                          <span className="text-xs font-medium">{isNightMode ? '22°C 🌙 Hafif Esintili' : '26°C ☀️ Güneşli'}</span>
+                          <span className="text-xs font-medium">
+                              {weather.temp !== null 
+                                  ? `${weather.temp}°C ${weather.icon} ${weather.desc}` 
+                                  : (isNightMode ? 'Yükleniyor...' : 'Yükleniyor...')}
+                          </span>
                       </div>
                   </div>
                   <div className={`flex p-1.5 rounded-2xl backdrop-blur-md w-full sm:w-auto transition-colors ${isNightMode ? 'bg-black/40 border border-slate-700' : 'bg-black/20 sm:bg-white/50 border border-white/10 sm:border-white'}`}>
