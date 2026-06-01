@@ -637,15 +637,21 @@
           };
 
           // Tema URL'leri (Antalya'ya Özgü Bağlantılar)
-          const bgImageUrl = (activeTab === 'reports' || (activeTab === 'archives' && selectedArchive))
-            ? "url('https://images.unsplash.com/photo-1542051841857-5f90071e7989?q=80&w=2070&auto=format&fit=crop')" 
-            : isNightMode 
-                ? "url('https://images.unsplash.com/photo-1604928141064-207cea6f5722?q=80&w=2070&auto=format&fit=crop')" 
-                : "url('https://images.unsplash.com/photo-1598901847919-b15dd7ed8271?q=80&w=2070&auto=format&fit=crop')"; 
-
-          const overlayClass = isNightMode 
-            ? "bg-slate-900/70 backdrop-blur-[6px]" 
-            : "bg-cyan-900/40 sm:bg-white/60 backdrop-blur-md";
+          const antalyaBackgrounds = {
+            dashboard: "https://commons.wikimedia.org/wiki/Special:FilePath/View%20of%20Konyaalt%C4%B1%20Beach%20and%20Beyda%C4%9Flar%C4%B1%20Mountains%2C%20Antalya.jpg?width=2400",
+            reports: "https://commons.wikimedia.org/wiki/Special:FilePath/Upper%20Duden%20Falls.jpg?width=2400",
+            archives: "https://commons.wikimedia.org/wiki/Special:FilePath/Antalya%20-%20Hadrian%27s%20Gate.jpg?width=2400"
+          };
+          const currentBackground = antalyaBackgrounds[activeTab] || antalyaBackgrounds.dashboard;
+          const backgroundTint = isNightMode
+            ? "linear-gradient(135deg, rgba(15, 23, 42, 0.68), rgba(15, 23, 42, 0.34))"
+            : activeTab === 'dashboard'
+                ? "linear-gradient(135deg, rgba(8, 47, 73, 0.42), rgba(255, 255, 255, 0.58))"
+                : activeTab === 'reports'
+                    ? "linear-gradient(135deg, rgba(15, 23, 42, 0.46), rgba(255, 247, 237, 0.66))"
+                    : "linear-gradient(135deg, rgba(30, 41, 59, 0.52), rgba(248, 250, 252, 0.64))";
+          const bgImageUrl = `${backgroundTint}, url('${currentBackground}')`;
+          const bgPosition = activeTab === 'reports' ? 'center 42%' : 'center center';
 
           const getAIAdvice = (emp) => {
               if (emp.isWinner) return "Harika iş çıkardın! Valizini hazırlamaya başla. 🏖️";
@@ -655,9 +661,7 @@
           };
 
           return (
-            <div className="min-h-screen print:bg-white text-slate-800 font-sans pb-24 relative bg-cover bg-center bg-fixed transition-all duration-1000" style={{ backgroundImage: bgImageUrl }}>
-              <div className={`absolute inset-0 -z-10 print:hidden transition-all duration-1000 ${overlayClass}`}></div>
-              
+            <div className="min-h-screen print:bg-white text-slate-800 font-sans pb-24 relative bg-cover bg-center bg-fixed transition-all duration-1000" style={{ backgroundImage: bgImageUrl, backgroundPosition: bgPosition }}>
               {flightKey !== 0 && <div key={flightKey} className="airplane-flyby"><i className="fa-solid fa-plane text-6xl sm:text-8xl drop-shadow-xl text-white"></i></div>}
 
               {/* Üst Navigasyon & Atmosfer Paneli */}
@@ -859,7 +863,7 @@
                 {/* --- Raporlar Sekmesi --- */}
                 {activeTab === 'reports' && (
                   <div className="max-w-4xl mx-auto animate-fade-in">
-                    <div className="bg-white/95 backdrop-blur-md p-6 sm:p-10 rounded-[2rem] shadow-2xl border border-white/50 print:shadow-none print:border-none print:p-0 relative overflow-hidden">
+                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-10 rounded-[2rem] shadow-2xl border border-white/50 print:shadow-none print:border-none print:p-0 relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500"></div>
                       
                       <div className="text-center mb-10 pb-6 border-b border-dashed border-slate-200">
