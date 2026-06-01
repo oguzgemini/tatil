@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v4'; // Visual backgrounds updated.
+const CACHE_NAME = 'tatil-app-v5'; // Dashboard features updated.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
