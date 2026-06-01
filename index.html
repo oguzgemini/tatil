@@ -191,11 +191,12 @@
 
         // --- Alt Bileşenler ---
 
-        const CountdownTimer = () => {
-            const targetDate = new Date('2026-04-01T00:00:00').getTime();
+        const CountdownTimer = ({ vacationEndDate }) => {
+            const targetDate = new Date(`${vacationEndDate || '2026-09-30'}T23:59:59`).getTime();
             const [timeLeft, setTimeLeft] = useState(targetDate - new Date().getTime());
 
             useEffect(() => {
+                setTimeLeft(targetDate - new Date().getTime());
                 const interval = setInterval(() => {
                     const now = new Date().getTime();
                     const distance = targetDate - now;
@@ -482,6 +483,7 @@
           const [targetOld, setTargetOld] = useState(1200000);
           const [targetNew, setTargetNew] = useState(800000);
           const [cutoffDate, setCutoffDate] = useState('2026-01-01');
+          const [vacationEndDate, setVacationEndDate] = useState('2026-09-30');
           const [showSettings, setShowSettings] = useState(false);
 
           // Form
@@ -611,6 +613,7 @@
                     if (data.targetOld !== undefined) setTargetOld(data.targetOld);
                     if (data.targetNew !== undefined) setTargetNew(data.targetNew);
                     if (data.cutoffDate) setCutoffDate(data.cutoffDate);
+                    if (data.vacationEndDate) setVacationEndDate(data.vacationEndDate);
                     if (data.months) setMonths(data.months);
                 }
             });
@@ -659,7 +662,7 @@
           const handleSaveSettings = async () => {
               if (dbStatus !== 'connected') return;
               try {
-                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main'), { targetOld, targetNew, cutoffDate, months });
+                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main'), { targetOld, targetNew, cutoffDate, vacationEndDate, months });
                   setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 3000);
               } catch (err) {}
           };
@@ -924,7 +927,7 @@
 
                     {/* Hero Bölümü */}
                     <div className="flex flex-col lg:flex-row gap-6 mb-8">
-                        <CountdownTimer />
+                        <CountdownTimer vacationEndDate={vacationEndDate} />
                         <div className="flex-1 grid grid-cols-2 gap-4">
                             <div className={`rounded-3xl p-6 shadow-xl flex flex-col justify-center items-center text-center transition-transform hover:-translate-y-1 ${isNightMode ? 'bg-slate-800/90 border border-slate-700 text-slate-200' : 'bg-white/95 border border-slate-100'}`}>
                                 <div className="w-12 h-12 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center text-xl mb-2"><i className="fa-solid fa-users"></i></div>
@@ -994,6 +997,10 @@
                                             <div className="pt-1">
                                                 <label className="block text-[10px] font-bold text-amber-600 mb-1">YENİ PERSONEL MİLADI</label>
                                                 <input type="date" value={cutoffDate} onChange={e=>setCutoffDate(e.target.value)} className={`w-full px-3 py-2 rounded-lg font-bold outline-none text-sm ${isNightMode?'bg-amber-900/30 text-amber-400 border border-amber-900/50':'bg-amber-50 text-amber-800 border border-amber-200'}`} />
+                                            </div>
+                                            <div className="pt-1">
+                                                <label className="block text-[10px] font-bold text-cyan-600 mb-1">TATİL BİTİŞ TARİHİ</label>
+                                                <input type="date" value={vacationEndDate} onChange={e=>setVacationEndDate(e.target.value)} className={`w-full px-3 py-2 rounded-lg font-bold outline-none text-sm ${isNightMode?'bg-cyan-900/30 text-cyan-300 border border-cyan-900/50':'bg-cyan-50 text-cyan-800 border border-cyan-200'}`} />
                                             </div>
                                         </div>
                                         <div className="space-y-4">
