@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v6'; // Countdown settings updated.
+const CACHE_NAME = 'tatil-app-v7'; // Remember admin and profile close fixes.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
