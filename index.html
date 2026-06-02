@@ -101,6 +101,16 @@
             pointer-events: none;
             animation: confettiFall 2.4s ease-in forwards;
         }
+
+        @keyframes announcementScroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .announcement-track {
+            display: inline-flex;
+            min-width: max-content;
+            animation: announcementScroll 24s linear infinite;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased">
@@ -279,7 +289,7 @@
             if (winners.length === 0) return null;
             return (
                 <div className={`mb-8 rounded-[2rem] overflow-hidden shadow-2xl border relative ${isNightMode ? 'bg-slate-900/80 border-slate-700 text-white' : 'bg-white/90 border-white/70'}`}>
-                    <div className="absolute inset-0 opacity-20 bg-[url('https://commons.wikimedia.org/wiki/Special:FilePath/Antalya%20Lara%20Beach.jpg?width=1600')] bg-cover bg-center"></div>
+                    <div className="absolute inset-0 opacity-20 bg-[url('https://commons.wikimedia.org/wiki/Special:FilePath/View%20of%20Konyaalt%C4%B1%20Beach%20and%20Beyda%C4%9Flar%C4%B1%20Mountains%2C%20Antalya.jpg?width=1600')] bg-cover bg-center"></div>
                     <div className="relative z-10 p-5 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
                             <div>
@@ -422,6 +432,96 @@
             </div>
         );
 
+        const AnnouncementBand = ({ announcements, isNightMode }) => {
+            if (!announcements.length) return null;
+            return (
+                <div className={`max-w-7xl mx-auto mb-6 overflow-hidden rounded-2xl border shadow-xl print:hidden ${isNightMode ? 'bg-slate-900/85 border-slate-700 text-white' : 'bg-white/85 border-white/70 text-slate-700'}`}>
+                    <div className="flex items-center gap-3">
+                        <div className="px-4 py-3 bg-emerald-500 text-white font-black text-xs uppercase tracking-widest shrink-0"><i className="fa-solid fa-bullhorn mr-1.5"></i> Duyuru</div>
+                        <div className="overflow-hidden flex-1 py-3">
+                            <div className="announcement-track gap-8 text-xs sm:text-sm font-black">
+                                {[...announcements, ...announcements].map((item, index) => (
+                                    <span key={index} className="flex items-center gap-2"><i className={`fa-solid ${item.icon} ${item.color}`}></i>{item.text}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AdminAlerts = ({ nearWinners, allProcessedData, isNightMode, onProfileClick }) => {
+            const closeToTicket = allProcessedData.filter(e => !e.isWinner && e.remaining <= 100000 && e.remaining > 0).sort((a,b) => a.remaining - b.remaining).slice(0, 4);
+            const returnRisks = allProcessedData.filter(e => Number(e.returns) > 0).sort((a,b) => Number(b.returns) - Number(a.returns)).slice(0, 4);
+            const alerts = [
+                ...nearWinners.slice(0, 3).map(e => ({ type: 'Hedefe yakın', icon: 'fa-fire', color: 'text-rose-500', emp: e, detail: `% ${e.percentage.toFixed(0)} seviyesinde` })),
+                ...closeToTicket.map(e => ({ type: 'Son hamle', icon: 'fa-bolt', color: 'text-amber-500', emp: e, detail: `${formatTL(e.remaining)} kaldı` })),
+                ...returnRisks.map(e => ({ type: 'İade riski', icon: 'fa-triangle-exclamation', color: 'text-orange-500', emp: e, detail: `${formatTL(e.returns)} iade` }))
+            ].slice(0, 8);
+
+            if (!alerts.length) return null;
+            return (
+                <div className={`mb-8 rounded-[2rem] p-5 sm:p-6 shadow-xl border ${isNightMode ? 'bg-slate-900/85 border-rose-500/30 text-white' : 'bg-white/90 border-rose-200'}`}>
+                    <div className="flex items-center justify-between gap-3 mb-4">
+                        <h2 className="text-lg font-black uppercase tracking-widest"><i className="fa-solid fa-radar text-rose-500 mr-2"></i> Admin Uyarıları</h2>
+                        <span className="text-[10px] font-black px-3 py-1 rounded-full bg-rose-500 text-white">{alerts.length} sinyal</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {alerts.map((alert, index) => (
+                            <button key={`${alert.type}-${alert.emp.id}-${index}`} onClick={() => onProfileClick(alert.emp)} className={`text-left p-4 rounded-2xl border transition-all hover:-translate-y-1 ${isNightMode ? 'bg-slate-950/70 border-slate-700 hover:bg-slate-800' : 'bg-slate-50 border-slate-100 hover:bg-white hover:shadow-lg'}`}>
+                                <div className="flex items-center justify-between gap-2 mb-3">
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${alert.color}`}><i className={`fa-solid ${alert.icon} mr-1`}></i>{alert.type}</span>
+                                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-30"></i>
+                                </div>
+                                <p className={`font-black text-sm truncate ${isNightMode ? 'text-white' : 'text-slate-800'}`}>{alert.emp.name}</p>
+                                <p className="text-[10px] font-bold opacity-60 mt-1">{alert.detail}</p>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const ArchiveComparison = ({ archives, isNightMode }) => {
+            if (archives.length < 2) return null;
+            const current = archives[0];
+            const previous = archives[1];
+            const currentRate = current.totalEmployees ? (current.totalWinners / current.totalEmployees) * 100 : 0;
+            const previousRate = previous.totalEmployees ? (previous.totalWinners / previous.totalEmployees) * 100 : 0;
+            const currentRevenue = [...(current.oldWinners || []), ...(current.newWinners || [])].reduce((sum, emp) => sum + (Number(emp.netRevenue) || 0), 0);
+            const previousRevenue = [...(previous.oldWinners || []), ...(previous.newWinners || [])].reduce((sum, emp) => sum + (Number(emp.netRevenue) || 0), 0);
+            const metrics = [
+                { label: 'Kazanan farkı', value: current.totalWinners - previous.totalWinners, suffix: ' kişi' },
+                { label: 'Başarı oranı', value: currentRate - previousRate, suffix: '%' },
+                { label: 'Kazanan cirosu', value: currentRevenue - previousRevenue, money: true }
+            ];
+
+            return (
+                <div className={`mb-8 rounded-[2rem] p-5 sm:p-6 shadow-xl border ${isNightMode ? 'bg-slate-900/85 border-indigo-500/30 text-white' : 'bg-white/90 border-white/70'}`}>
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
+                        <div>
+                            <h2 className="text-lg sm:text-xl font-black uppercase tracking-widest"><i className="fa-solid fa-code-compare text-indigo-400 mr-2"></i> Arşiv Karşılaştırma</h2>
+                            <p className="text-xs font-bold opacity-60 mt-1">{current.month} {current.year} / {previous.month} {previous.year}</p>
+                        </div>
+                        <span className="self-start sm:self-auto px-3 py-1 rounded-full bg-indigo-500 text-white text-xs font-black">Son 2 dönem</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {metrics.map(metric => {
+                            const positive = metric.value >= 0;
+                            return (
+                                <div key={metric.label} className={`p-4 rounded-2xl ${isNightMode ? 'bg-slate-950/70' : 'bg-slate-50'}`}>
+                                    <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest">{metric.label}</p>
+                                    <p className={`text-2xl font-black mt-1 ${positive ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                        {positive ? '+' : ''}{metric.money ? formatTL(metric.value) : `${metric.value.toFixed(metric.suffix === '%' ? 1 : 0)}${metric.suffix}`}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
         const SkeletonTable = () => (
             <div className="space-y-4 p-4">
                 {[1,2,3].map(i => (
@@ -485,6 +585,7 @@
           const [targetNew, setTargetNew] = useState(800000);
           const [cutoffDate, setCutoffDate] = useState('2026-01-01');
           const [vacationEndDate, setVacationEndDate] = useState('2026-09-30');
+          const [themeMode, setThemeMode] = useState('auto');
           const [showSettings, setShowSettings] = useState(false);
 
           // Form
@@ -496,13 +597,21 @@
           // Saat Kontrolü (Atmosfer)
           useEffect(() => {
               const checkTime = () => {
+                  if (themeMode === 'gala') {
+                      setIsNightMode(true);
+                      return;
+                  }
+                  if (themeMode !== 'auto') {
+                      setIsNightMode(false);
+                      return;
+                  }
                   const hour = new Date().getHours();
-                  setIsNightMode(hour >= 19 || hour < 6); 
+                  setIsNightMode(hour >= 19 || hour < 6);
               };
               checkTime();
               const timer = setInterval(checkTime, 60000);
               return () => clearInterval(timer);
-          }, []);
+          }, [themeMode]);
 
           useEffect(() => {
               if (localStorage.getItem('tatil_admin_remembered') === 'true') {
@@ -622,6 +731,7 @@
                     if (data.targetNew !== undefined) setTargetNew(data.targetNew);
                     if (data.cutoffDate) setCutoffDate(data.cutoffDate);
                     if (data.vacationEndDate) setVacationEndDate(data.vacationEndDate);
+                    if (data.themeMode) setThemeMode(data.themeMode);
                     if (data.months) setMonths(data.months);
                 }
             });
@@ -677,7 +787,7 @@
           const handleSaveSettings = async () => {
               if (dbStatus !== 'connected') return;
               try {
-                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main'), { targetOld, targetNew, cutoffDate, vacationEndDate, months });
+                  await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main'), { targetOld, targetNew, cutoffDate, vacationEndDate, themeMode, months });
                   setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 3000);
               } catch (err) {}
           };
@@ -759,6 +869,15 @@
               ...m,
               total: employees.reduce((sum, emp) => sum + (Number(emp.sales?.[m.id]) || 0), 0)
           })), [employees, months]);
+          const announcementItems = useMemo(() => {
+              const bestOffice = officeStats[0];
+              const items = [];
+              items.push({ icon: 'fa-ticket', color: 'text-emerald-400', text: `${totalWinners} kişi Antalya biletini aldı` });
+              if (nearWinners.length > 0) items.push({ icon: 'fa-fire', color: 'text-rose-400', text: `${nearWinners.length} kişi hedefe yaklaştı` });
+              if (bestOffice) items.push({ icon: 'fa-building', color: 'text-cyan-400', text: `${bestOffice.office} ofis yarışında önde` });
+              if (allProcessedData[0]) items.push({ icon: 'fa-crown', color: 'text-amber-400', text: `Lider: ${allProcessedData[0].name} - %${allProcessedData[0].percentage.toFixed(0)}` });
+              return items;
+          }, [totalWinners, nearWinners, officeStats, allProcessedData]);
 
           // --- Arşivleme İşlemi ---
           const handleArchiveSubmit = async (e) => {
@@ -853,12 +972,24 @@
           // Tema URL'leri (Antalya'ya Özgü Bağlantılar)
           const antalyaBackgrounds = {
             dashboard: "https://commons.wikimedia.org/wiki/Special:FilePath/View%20of%20Konyaalt%C4%B1%20Beach%20and%20Beyda%C4%9Flar%C4%B1%20Mountains%2C%20Antalya.jpg?width=2400",
-            leaderboard: "https://commons.wikimedia.org/wiki/Special:FilePath/Antalya%20from%20T%C3%BCnektepe.jpg?width=2400",
+            leaderboard: "https://commons.wikimedia.org/wiki/Special:FilePath/View%20of%20Konyaalt%C4%B1%20Beach%20and%20Beyda%C4%9Flar%C4%B1%20Mountains%2C%20Antalya.jpg?width=2400",
             reports: "https://commons.wikimedia.org/wiki/Special:FilePath/Upper%20Duden%20Falls.jpg?width=2400",
             archives: "https://commons.wikimedia.org/wiki/Special:FilePath/Antalya%20-%20Hadrian%27s%20Gate.jpg?width=2400"
           };
-          const currentBackground = antalyaBackgrounds[activeTab] || antalyaBackgrounds.dashboard;
-          const backgroundTint = isNightMode
+          const themeBackgrounds = {
+            beach: "https://commons.wikimedia.org/wiki/Special:FilePath/View%20of%20Konyaalt%C4%B1%20Beach%20and%20Beyda%C4%9Flar%C4%B1%20Mountains%2C%20Antalya.jpg?width=2400",
+            flight: "https://commons.wikimedia.org/wiki/Special:FilePath/Upper%20Duden%20Falls.jpg?width=2400",
+            gala: "https://commons.wikimedia.org/wiki/Special:FilePath/Antalya%20at%20night.jpg?width=2400",
+            minimal: antalyaBackgrounds[activeTab] || antalyaBackgrounds.dashboard
+          };
+          const currentBackground = themeMode !== 'auto' && themeBackgrounds[themeMode] ? themeBackgrounds[themeMode] : (antalyaBackgrounds[activeTab] || antalyaBackgrounds.dashboard);
+          const backgroundTint = themeMode === 'minimal'
+            ? "linear-gradient(135deg, rgba(248, 250, 252, 0.92), rgba(226, 232, 240, 0.86))"
+            : themeMode === 'beach'
+                ? "linear-gradient(135deg, rgba(8, 145, 178, 0.36), rgba(240, 253, 250, 0.58))"
+            : themeMode === 'flight'
+                ? "linear-gradient(135deg, rgba(30, 64, 175, 0.48), rgba(239, 246, 255, 0.62))"
+            : isNightMode
             ? "linear-gradient(135deg, rgba(15, 23, 42, 0.68), rgba(15, 23, 42, 0.34))"
             : activeTab === 'dashboard'
                 ? "linear-gradient(135deg, rgba(8, 47, 73, 0.42), rgba(255, 255, 255, 0.58))"
@@ -937,7 +1068,9 @@
               <div className="p-4 md:p-8 animate-fade-in">
                 {activeTab === 'dashboard' && (
                   <div className="max-w-7xl mx-auto print:hidden">
+                    <AnnouncementBand announcements={announcementItems} isNightMode={isNightMode} />
                     {isAdmin && <AdminQuickPanel employees={employees} archives={archives} officeStats={officeStats} isNightMode={isNightMode} />}
+                    {isAdmin && <AdminAlerts nearWinners={nearWinners} allProcessedData={allProcessedData} isNightMode={isNightMode} onProfileClick={setSelectedProfile} />}
                     <WinnersShowcase winners={winners} isNightMode={isNightMode} onProfileClick={setSelectedProfile} />
 
                     {/* Hero Bölümü */}
@@ -1030,6 +1163,22 @@
                                             <div className="flex gap-2">
                                                 <input type="text" value={newMonthName} onChange={e=>setNewMonthName(e.target.value)} onKeyPress={e=>e.key==='Enter'&&handleAddMonth()} placeholder="Yeni ay ekle" className={`flex-1 px-3 py-2 rounded-lg outline-none text-sm font-medium ${isNightMode?'bg-slate-900 text-white':'bg-slate-50 text-slate-700 border border-slate-200'}`} />
                                                 <button onClick={handleAddMonth} className={`text-white px-3 rounded-lg font-bold transition-colors ${isNightMode?'bg-amber-600 hover:bg-amber-700':'bg-amber-500 hover:bg-amber-600 shadow-md'}`}><i className="fa-solid fa-plus"></i></button>
+                                            </div>
+                                            <div className="pt-2">
+                                                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-500/30 pb-1.5 mb-3">Tema Modu</h4>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                    {[
+                                                        { id: 'auto', label: 'Otomatik', icon: 'fa-clock' },
+                                                        { id: 'beach', label: 'Plaj', icon: 'fa-umbrella-beach' },
+                                                        { id: 'flight', label: 'Uçuş', icon: 'fa-plane' },
+                                                        { id: 'gala', label: 'Gala', icon: 'fa-moon' },
+                                                        { id: 'minimal', label: 'Minimal', icon: 'fa-layer-group' }
+                                                    ].map(theme => (
+                                                        <button key={theme.id} type="button" onClick={() => setThemeMode(theme.id)} className={`px-3 py-2 rounded-xl text-xs font-black border transition-all ${themeMode === theme.id ? (isNightMode ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-cyan-600 border-cyan-500 text-white shadow-md') : (isNightMode ? 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800')}`}>
+                                                            <i className={`fa-solid ${theme.icon} mr-1.5`}></i>{theme.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1140,6 +1289,7 @@
                   <div className="max-w-6xl mx-auto animate-fade-in print:hidden">
                     {!selectedArchive ? (
                         <>
+                        <ArchiveComparison archives={archives} isNightMode={isNightMode} />
                         <div className="mb-8 flex justify-between items-center">
                             <h2 className={`text-xl sm:text-2xl font-black uppercase tracking-widest ${isNightMode ? 'text-white' : 'text-slate-800'}`}>
                                 <i className="fa-solid fa-box-archive mr-2 opacity-50"></i> Geçmiş Tatil Arşivleri

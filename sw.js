@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v7'; // Remember admin and profile close fixes.
+const CACHE_NAME = 'tatil-app-v8'; // Creative dashboard features added.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
