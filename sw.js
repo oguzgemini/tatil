@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v12'; // Fix Turkish export text and formulas.
+const CACHE_NAME = 'tatil-app-v13'; // Match Excel success to dashboard progress.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

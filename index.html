@@ -945,7 +945,7 @@
                   const netFormulaParts = months.map((_, index) => `RC[-${months.length + 1 - index}]`);
                   const netFormula = `=${netFormulaParts.length ? `${netFormulaParts.join('+')}-RC[-1]` : '-RC[-1]'}`;
                   const remainingFormula = '=RC[-1]-RC[-2]';
-                  const percentageFormula = '=RC[-3]/RC[-2]';
+                  const percentageFormula = '=(RC[-3]/RC[-2])*100';
                   return `
                     <Row>
                       ${buildExcelCell(order, 'Number')}
@@ -958,7 +958,7 @@
                       ${buildExcelCell(emp.netRevenue, 'Number', netFormula)}
                       ${buildExcelCell(emp.target, 'Number')}
                       ${buildExcelCell(emp.remaining, 'Number', remainingFormula)}
-                      ${buildExcelCell(emp.percentage / 100, 'Number', percentageFormula)}
+                      ${buildExcelCell(emp.percentage, 'Number', percentageFormula)}
                       ${buildExcelCell(emp.isWinner ? 'Bilet Aldı' : 'Bekliyor')}
                     </Row>
                   `;
