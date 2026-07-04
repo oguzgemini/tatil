@@ -155,7 +155,13 @@
           const date = new Date(dateString);
           return isNaN(date.getTime()) ? '-' : date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         };
-        const getMonthlyReturns = (returns) => (returns && typeof returns === 'object' && !Array.isArray(returns)) ? returns : {};
+        const getJuneMonthId = (months = []) => months.find(m => (m.name || '').toLocaleLowerCase('tr-TR').includes('haziran'))?.id || months[0]?.id;
+        const getMonthlyReturns = (returns, months = []) => {
+          if (returns && typeof returns === 'object' && !Array.isArray(returns)) return returns;
+          const legacyReturn = Number(returns) || 0;
+          const juneMonthId = getJuneMonthId(months);
+          return legacyReturn > 0 && juneMonthId ? { [juneMonthId]: legacyReturn } : {};
+        };
         const getReturnsTotal = (returns, months = []) => {
           if (returns && typeof returns === 'object' && !Array.isArray(returns)) {
             const source = months.length ? months.map(m => returns[m.id]) : Object.values(returns);
@@ -1196,7 +1202,7 @@
 
             const processed = filtered.map(emp => {
                 const totalSales = months.reduce((sum, m) => sum + (Number(emp.sales[m.id]) || 0), 0);
-                const monthlyReturns = getMonthlyReturns(emp.returns);
+                const monthlyReturns = getMonthlyReturns(emp.returns, months);
                 const totalReturns = getReturnsTotal(emp.returns, months);
                 const netRevenue = totalSales - totalReturns;
                 const currentTarget = Number(isNewType ? targetNew : targetOld) || 0;
@@ -1292,9 +1298,9 @@
           };
 
           const handleEdit = (employee) => {
-            const existingReturns = Object.keys(getMonthlyReturns(employee.monthlyReturns || employee.returns)).length > 0
-              ? getMonthlyReturns(employee.monthlyReturns || employee.returns)
-              : (months[0] && Number(employee.returns) > 0 ? { [months[0].id]: Number(employee.returns) || 0 } : {});
+            const existingReturns = Object.keys(getMonthlyReturns(employee.monthlyReturns || employee.returns, months)).length > 0
+              ? getMonthlyReturns(employee.monthlyReturns || employee.returns, months)
+              : {};
             setFormData({ name: employee.name, office: employee.office, entryDate: employee.entryDate || '', sales: { ...employee.sales }, returns: { ...existingReturns } });
             setEditingId(employee.id); setFormError(''); setIsModalOpen(true); setSelectedProfile(null);
           };
@@ -1311,7 +1317,7 @@
           };
 
           const handleReturnsChange = (monthId, value) => {
-            setFormData(prev => ({ ...prev, returns: { ...getMonthlyReturns(prev.returns), [monthId]: parseInputNumber(value) } }));
+            setFormData(prev => ({ ...prev, returns: { ...getMonthlyReturns(prev.returns, months), [monthId]: parseInputNumber(value) } }));
           };
 
           const handleFormSubmit = async (e) => {
@@ -1322,7 +1328,7 @@
             const cleanSales = {};
             months.forEach(m => { cleanSales[m.id] = Number(formData.sales[m.id]) || 0; });
             const cleanReturns = {};
-            months.forEach(m => { cleanReturns[m.id] = Number(getMonthlyReturns(formData.returns)[m.id]) || 0; });
+            months.forEach(m => { cleanReturns[m.id] = Number(getMonthlyReturns(formData.returns, months)[m.id]) || 0; });
             const payload = { office: formData.office.toUpperCase(), name: formData.name.toUpperCase(), entryDate: formData.entryDate, sales: cleanSales, returns: cleanReturns };
 
             try {
@@ -1942,7 +1948,7 @@
                                         {months.map(m => (
                                             <div key={m.id}>
                                                 <label className="block text-[9px] font-bold text-rose-500/80 mb-1 ml-1">{m.name} (TL)</label>
-                                                <input type="text" inputMode="numeric" value={getMonthlyReturns(formData.returns)[m.id]?formatInputNumber(getMonthlyReturns(formData.returns)[m.id]):''} onChange={e=>handleReturnsChange(m.id, e.target.value)} placeholder="0" className={`w-full px-3 py-2 rounded-lg outline-none font-black text-rose-500 text-sm ${isNightMode ? 'bg-slate-800 focus:ring-rose-500' : 'bg-white focus:ring-2 focus:ring-rose-400 border border-rose-100'}`} />
+                                                <input type="text" inputMode="numeric" value={getMonthlyReturns(formData.returns, months)[m.id]?formatInputNumber(getMonthlyReturns(formData.returns, months)[m.id]):''} onChange={e=>handleReturnsChange(m.id, e.target.value)} placeholder="0" className={`w-full px-3 py-2 rounded-lg outline-none font-black text-rose-500 text-sm ${isNightMode ? 'bg-slate-800 focus:ring-rose-500' : 'bg-white focus:ring-2 focus:ring-rose-400 border border-rose-100'}`} />
                                             </div>
                                         ))}
                                     </div>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v14'; // Monthly return amounts.
+const CACHE_NAME = 'tatil-app-v15'; // Move legacy returns to June.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
