@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v10'; // Main page export options.
+const CACHE_NAME = 'tatil-app-v11'; // Formula exports and report PDF.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
