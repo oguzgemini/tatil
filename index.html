@@ -836,7 +836,9 @@
                   ...processedOldData.map((emp, index) => ({ emp, typeLabel: 'Eski Personel', order: index + 1 })),
                   ...processedNewData.map((emp, index) => ({ emp, typeLabel: 'Yeni Personel', order: index + 1 }))
               ];
-              return { generatedAt: fixedGeneratedAt, officeText: fixedOfficeText, headers: fixedHeaders, rows: fixedRows };
+              const fixedOldRows = processedOldData.map((emp, index) => ({ emp, typeLabel: 'Eski Personel', order: index + 1 }));
+              const fixedNewRows = processedNewData.map((emp, index) => ({ emp, typeLabel: 'Yeni Personel', order: index + 1 }));
+              return { generatedAt: fixedGeneratedAt, officeText: fixedOfficeText, headers: fixedHeaders, rows: fixedRows, oldRows: fixedOldRows, newRows: fixedNewRows };
               const generatedAt = new Date().toLocaleString('tr-TR');
               const officeText = filterOffice === 'All' ? 'TÃ¼m Ofisler' : filterOffice;
               const headers = ['SÄ±ra', 'Grup', 'Personel', 'Ofis', 'GiriÅŸ Tarihi', ...months.map(m => m.name), 'Ä°ade', 'Net Ciro', 'Hedef', 'Kalan', 'BaÅŸarÄ±', 'Durum'];
@@ -849,7 +851,7 @@
 
           const buildReportHtml = () => {
               const report = buildExportContext();
-              const reportRows = report.rows.map(({ emp, typeLabel, order }) => `
+              const buildReportRows = (rows) => rows.map(({ emp, typeLabel, order }) => `
                 <tr>
                   <td>${order}</td>
                   <td>${escapeExcelCell(typeLabel)}</td>
@@ -865,6 +867,14 @@
                   <td>${emp.isWinner ? 'Bilet Aldı' : 'Bekliyor'}</td>
                 </tr>
               `).join('');
+              const buildReportSection = (title, note, rows) => `
+                <h2>${escapeExcelCell(title)}</h2>
+                <p>${escapeExcelCell(note)} | Kayıt: ${rows.length}</p>
+                <table>
+                  <thead><tr>${report.headers.map(h => `<th>${escapeExcelCell(h)}</th>`).join('')}</tr></thead>
+                  <tbody>${rows.length ? buildReportRows(rows) : `<tr><td colspan="${report.headers.length}">Kayıt bulunmuyor.</td></tr>`}</tbody>
+                </table>
+              `;
               return `
                 <!DOCTYPE html>
                 <html>
@@ -894,11 +904,8 @@
                   <table>
                     <tr class="summary"><td>Katılımcı</td><td>${employees.length}</td><td>Bileti Kapanlar</td><td>${totalWinners}</td><td>Eski Hedef</td><td>${escapeExcelCell(formatTL(targetOld))}</td><td>Yeni Hedef</td><td>${escapeExcelCell(formatTL(targetNew))}</td></tr>
                   </table>
-                  <h2>Personel Listesi</h2>
-                  <table>
-                    <thead><tr>${report.headers.map(h => `<th>${escapeExcelCell(h)}</th>`).join('')}</tr></thead>
-                    <tbody>${reportRows}</tbody>
-                  </table>
+                  ${buildReportSection('ESKİ PERSONEL', '1 Haziran 2025 tarihi öncesi İpaş giriş tarihi olan satış temsilcileri', report.oldRows)}
+                  ${buildReportSection('YENİ PERSONEL', '1 Haziran 2025 tarihi sonrası İpaş giriş tarihi olan satış temsilcileri', report.newRows)}
                 </body>
                 </html>
               `;
@@ -1015,6 +1022,13 @@
           const handleExportExcel = () => {
               const excelReport = buildExportContext();
               const excelFirstDataRow = 8;
+              const buildExcelSection = (title, note, rows) => `
+                      <Row></Row>
+                      <Row><Cell ss:MergeAcross="${Math.max(excelReport.headers.length - 1, 1)}" ss:StyleID="Summary"><Data ss:Type="String">${escapeExcelCell(title)} - ${rows.length} kayıt</Data></Cell></Row>
+                      <Row><Cell ss:MergeAcross="${Math.max(excelReport.headers.length - 1, 1)}"><Data ss:Type="String">${escapeExcelCell(note)}</Data></Cell></Row>
+                      <Row>${excelReport.headers.map(h => `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeExcelCell(h)}</Data></Cell>`).join('')}</Row>
+                      ${rows.length ? buildFormulaExcelRows(rows, excelFirstDataRow) : `<Row><Cell ss:MergeAcross="${Math.max(excelReport.headers.length - 1, 1)}"><Data ss:Type="String">Kayıt bulunmuyor.</Data></Cell></Row>`}
+              `;
               const excelWorkbook = `<?xml version="1.0" encoding="UTF-8"?>
                 <?mso-application progid="Excel.Sheet"?>
                 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
@@ -1032,10 +1046,8 @@
                       <Row><Cell><Data ss:Type="String">Oluşturulma</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(excelReport.generatedAt)}</Data></Cell></Row>
                       <Row><Cell><Data ss:Type="String">Ofis filtresi</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(excelReport.officeText)}</Data></Cell><Cell><Data ss:Type="String">Arama</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(searchTerm || '-')}</Data></Cell></Row>
                       <Row ss:StyleID="Summary"><Cell><Data ss:Type="String">Katılımcı</Data></Cell><Cell><Data ss:Type="Number">${employees.length}</Data></Cell><Cell><Data ss:Type="String">Bileti Kapanlar</Data></Cell><Cell><Data ss:Type="Number">${totalWinners}</Data></Cell><Cell><Data ss:Type="String">Eski Hedef</Data></Cell><Cell><Data ss:Type="Number">${targetOld}</Data></Cell><Cell><Data ss:Type="String">Yeni Hedef</Data></Cell><Cell><Data ss:Type="Number">${targetNew}</Data></Cell></Row>
-                      <Row></Row>
-                      <Row><Cell ss:MergeAcross="${Math.max(excelReport.headers.length - 1, 1)}" ss:StyleID="Summary"><Data ss:Type="String">Personel Listesi</Data></Cell></Row>
-                      <Row>${excelReport.headers.map(h => `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeExcelCell(h)}</Data></Cell>`).join('')}</Row>
-                      ${buildFormulaExcelRows(excelReport.rows, excelFirstDataRow)}
+                      ${buildExcelSection('ESKİ PERSONEL', '1 Haziran 2025 tarihi öncesi İpaş giriş tarihi olan satış temsilcileri', excelReport.oldRows)}
+                      ${buildExcelSection('YENİ PERSONEL', '1 Haziran 2025 tarihi sonrası İpaş giriş tarihi olan satış temsilcileri', excelReport.newRows)}
                     </Table>
                     <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
                       <PageSetup><Layout x:Orientation="Landscape" /></PageSetup>

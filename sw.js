@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v16'; // Print PDF without popup.
+const CACHE_NAME = 'tatil-app-v17'; // Split exports by staff type.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
