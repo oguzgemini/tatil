@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v15'; // Move legacy returns to June.
+const CACHE_NAME = 'tatil-app-v16'; // Print PDF without popup.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
