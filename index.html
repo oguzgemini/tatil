@@ -815,6 +815,14 @@
           };
 
           const buildExportContext = () => {
+              const fixedGeneratedAt = new Date().toLocaleString('tr-TR');
+              const fixedOfficeText = filterOffice === 'All' ? 'Tüm Ofisler' : filterOffice;
+              const fixedHeaders = ['Sıra', 'Grup', 'Personel', 'Ofis', 'Giriş Tarihi', ...months.map(m => m.name), 'İade', 'Net Ciro', 'Hedef', 'Kalan', 'Başarı', 'Durum'];
+              const fixedRows = [
+                  ...processedOldData.map((emp, index) => ({ emp, typeLabel: 'Eski Personel', order: index + 1 })),
+                  ...processedNewData.map((emp, index) => ({ emp, typeLabel: 'Yeni Personel', order: index + 1 }))
+              ];
+              return { generatedAt: fixedGeneratedAt, officeText: fixedOfficeText, headers: fixedHeaders, rows: fixedRows };
               const generatedAt = new Date().toLocaleString('tr-TR');
               const officeText = filterOffice === 'All' ? 'TÃ¼m Ofisler' : filterOffice;
               const headers = ['SÄ±ra', 'Grup', 'Personel', 'Ofis', 'GiriÅŸ Tarihi', ...months.map(m => m.name), 'Ä°ade', 'Net Ciro', 'Hedef', 'Kalan', 'BaÅŸarÄ±', 'Durum'];
@@ -826,6 +834,60 @@
           };
 
           const buildReportHtml = () => {
+              const report = buildExportContext();
+              const reportRows = report.rows.map(({ emp, typeLabel, order }) => `
+                <tr>
+                  <td>${order}</td>
+                  <td>${escapeExcelCell(typeLabel)}</td>
+                  <td>${escapeExcelCell(emp.name)}</td>
+                  <td>${escapeExcelCell(emp.office)}</td>
+                  <td>${escapeExcelCell(formatDate(emp.entryDate))}</td>
+                  ${months.map(m => `<td>${escapeExcelCell(formatTL(emp.sales?.[m.id] || 0))}</td>`).join('')}
+                  <td>${escapeExcelCell(formatTL(emp.returns || 0))}</td>
+                  <td>${escapeExcelCell(formatTL(emp.netRevenue))}</td>
+                  <td>${escapeExcelCell(formatTL(emp.target))}</td>
+                  <td>${escapeExcelCell(formatTL(emp.remaining))}</td>
+                  <td>% ${emp.percentage.toFixed(1)}</td>
+                  <td>${emp.isWinner ? 'Bilet Aldı' : 'Bekliyor'}</td>
+                </tr>
+              `).join('');
+              return `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="UTF-8" />
+                  <title>Sahanın Kazananları Ana Sayfa</title>
+                  <style>
+                    @page { size: A4 landscape; margin: 10mm; }
+                    * { box-sizing: border-box; }
+                    body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; }
+                    h1 { margin: 0 0 8px; font-size: 22px; }
+                    h2 { margin: 18px 0 8px; font-size: 16px; }
+                    p { margin: 4px 0; font-size: 11px; color: #475569; }
+                    table { border-collapse: collapse; width: 100%; page-break-inside: auto; }
+                    tr { page-break-inside: avoid; page-break-after: auto; }
+                    th, td { border: 1px solid #cbd5e1; padding: 6px; font-size: 10px; vertical-align: top; }
+                    th { background: #0f766e; color: #ffffff; font-weight: 700; }
+                    .summary td { font-weight: 700; background: #f1f5f9; font-size: 11px; }
+                    td:nth-child(n+6) { text-align: right; white-space: nowrap; }
+                    td:last-child { text-align: left; }
+                  </style>
+                </head>
+                <body>
+                  <h1>Sahanın Kazananları - Ana Sayfa</h1>
+                  <p>Oluşturulma: ${escapeExcelCell(report.generatedAt)}</p>
+                  <p>Ofis filtresi: ${escapeExcelCell(report.officeText)} | Arama: ${escapeExcelCell(searchTerm || '-')}</p>
+                  <table>
+                    <tr class="summary"><td>Katılımcı</td><td>${employees.length}</td><td>Bileti Kapanlar</td><td>${totalWinners}</td><td>Eski Hedef</td><td>${escapeExcelCell(formatTL(targetOld))}</td><td>Yeni Hedef</td><td>${escapeExcelCell(formatTL(targetNew))}</td></tr>
+                  </table>
+                  <h2>Personel Listesi</h2>
+                  <table>
+                    <thead><tr>${report.headers.map(h => `<th>${escapeExcelCell(h)}</th>`).join('')}</tr></thead>
+                    <tbody>${reportRows}</tbody>
+                  </table>
+                </body>
+                </html>
+              `;
               const { generatedAt, officeText, headers } = buildExportContext();
               return `
                 <!DOCTYPE html>
@@ -879,6 +941,28 @@
           };
 
           const buildFormulaExcelRows = (rows, firstDataRow) => {
+              return rows.map(({ emp, typeLabel, order }) => {
+                  const netFormulaParts = months.map((_, index) => `RC[-${months.length + 1 - index}]`);
+                  const netFormula = `=${netFormulaParts.length ? `${netFormulaParts.join('+')}-RC[-1]` : '-RC[-1]'}`;
+                  const remainingFormula = '=RC[-1]-RC[-2]';
+                  const percentageFormula = '=RC[-3]/RC[-2]';
+                  return `
+                    <Row>
+                      ${buildExcelCell(order, 'Number')}
+                      ${buildExcelCell(typeLabel)}
+                      ${buildExcelCell(emp.name)}
+                      ${buildExcelCell(emp.office)}
+                      ${buildExcelCell(formatDate(emp.entryDate))}
+                      ${months.map(m => buildExcelCell(emp.sales?.[m.id] || 0, 'Number')).join('')}
+                      ${buildExcelCell(emp.returns || 0, 'Number')}
+                      ${buildExcelCell(emp.netRevenue, 'Number', netFormula)}
+                      ${buildExcelCell(emp.target, 'Number')}
+                      ${buildExcelCell(emp.remaining, 'Number', remainingFormula)}
+                      ${buildExcelCell(emp.percentage / 100, 'Number', percentageFormula)}
+                      ${buildExcelCell(emp.isWinner ? 'Bilet Aldı' : 'Bekliyor')}
+                    </Row>
+                  `;
+              }).join('');
               const firstMonthCol = excelColumnName(6);
               const lastMonthCol = excelColumnName(5 + months.length);
               const returnsCol = excelColumnName(6 + months.length);
@@ -912,6 +996,46 @@
           };
 
           const handleExportExcel = () => {
+              const excelReport = buildExportContext();
+              const excelFirstDataRow = 8;
+              const excelWorkbook = `<?xml version="1.0" encoding="UTF-8"?>
+                <?mso-application progid="Excel.Sheet"?>
+                <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+                  xmlns:o="urn:schemas-microsoft-com:office:office"
+                  xmlns:x="urn:schemas-microsoft-com:office:excel"
+                  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+                  <Styles>
+                    <Style ss:ID="Title"><Font ss:Bold="1" ss:Size="16" /><Interior ss:Color="#E0F2FE" ss:Pattern="Solid" /></Style>
+                    <Style ss:ID="Header"><Font ss:Bold="1" ss:Color="#FFFFFF" /><Interior ss:Color="#0F766E" ss:Pattern="Solid" /></Style>
+                    <Style ss:ID="Summary"><Font ss:Bold="1" /><Interior ss:Color="#F1F5F9" ss:Pattern="Solid" /></Style>
+                  </Styles>
+                  <Worksheet ss:Name="Ana Sayfa">
+                    <Table>
+                      <Row><Cell ss:MergeAcross="${Math.max(excelReport.headers.length - 1, 1)}" ss:StyleID="Title"><Data ss:Type="String">Sahanın Kazananları - Ana Sayfa</Data></Cell></Row>
+                      <Row><Cell><Data ss:Type="String">Oluşturulma</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(excelReport.generatedAt)}</Data></Cell></Row>
+                      <Row><Cell><Data ss:Type="String">Ofis filtresi</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(excelReport.officeText)}</Data></Cell><Cell><Data ss:Type="String">Arama</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(searchTerm || '-')}</Data></Cell></Row>
+                      <Row ss:StyleID="Summary"><Cell><Data ss:Type="String">Katılımcı</Data></Cell><Cell><Data ss:Type="Number">${employees.length}</Data></Cell><Cell><Data ss:Type="String">Bileti Kapanlar</Data></Cell><Cell><Data ss:Type="Number">${totalWinners}</Data></Cell><Cell><Data ss:Type="String">Eski Hedef</Data></Cell><Cell><Data ss:Type="Number">${targetOld}</Data></Cell><Cell><Data ss:Type="String">Yeni Hedef</Data></Cell><Cell><Data ss:Type="Number">${targetNew}</Data></Cell></Row>
+                      <Row></Row>
+                      <Row><Cell ss:MergeAcross="${Math.max(excelReport.headers.length - 1, 1)}" ss:StyleID="Summary"><Data ss:Type="String">Personel Listesi</Data></Cell></Row>
+                      <Row>${excelReport.headers.map(h => `<Cell ss:StyleID="Header"><Data ss:Type="String">${escapeExcelCell(h)}</Data></Cell>`).join('')}</Row>
+                      ${buildFormulaExcelRows(excelReport.rows, excelFirstDataRow)}
+                    </Table>
+                    <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+                      <PageSetup><Layout x:Orientation="Landscape" /></PageSetup>
+                    </WorksheetOptions>
+                  </Worksheet>
+                </Workbook>
+              `;
+              const cleanExcelBlob = new Blob(['\ufeff', excelWorkbook], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+              const cleanExcelUrl = URL.createObjectURL(cleanExcelBlob);
+              const cleanExcelLink = document.createElement('a');
+              cleanExcelLink.href = cleanExcelUrl;
+              cleanExcelLink.download = `sahanin-kazananlari-ana-sayfa-${new Date().toISOString().slice(0,10)}.xls`;
+              document.body.appendChild(cleanExcelLink);
+              cleanExcelLink.click();
+              document.body.removeChild(cleanExcelLink);
+              URL.revokeObjectURL(cleanExcelUrl);
+              return;
               const { generatedAt: excelGeneratedAt, officeText: excelOfficeText, headers: excelHeaders, rows: excelRows } = buildExportContext();
               const firstDataRow = 8;
               const workbook = `<?xml version="1.0" encoding="UTF-8"?>

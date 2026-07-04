@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v11'; // Formula exports and report PDF.
+const CACHE_NAME = 'tatil-app-v12'; // Fix Turkish export text and formulas.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
