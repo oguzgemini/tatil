@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v9'; // Copy updates.
+const CACHE_NAME = 'tatil-app-v10'; // Main page export options.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
