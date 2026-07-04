@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tatil-app-v13'; // Match Excel success to dashboard progress.
+const CACHE_NAME = 'tatil-app-v14'; // Monthly return amounts.
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
