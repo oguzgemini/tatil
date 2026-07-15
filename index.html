@@ -337,12 +337,13 @@
             );
         };
 
-        const LiveRankingList = ({ title, description, performers, accentClass, iconClass, isNightMode, onProfileClick }) => (
+        const LiveRankingList = ({ title, description, target, performers, accentClass, iconClass, isNightMode, onProfileClick }) => (
             <div className={`rounded-[2rem] shadow-2xl border overflow-hidden ${isNightMode ? 'bg-slate-900/85 border-slate-700 text-white' : 'bg-white/90 border-white/70'}`}>
                 <div className="p-5 sm:p-6 border-b border-slate-500/20 flex items-center justify-between gap-3">
                     <div>
                         <h2 className="text-lg sm:text-xl font-black uppercase tracking-widest"><i className={`fa-solid fa-ranking-star mr-2 ${iconClass}`}></i> {title}</h2>
                         <p className={`text-xs font-bold mt-1 ${isNightMode ? 'text-slate-400' : 'text-slate-500'}`}>{description}</p>
+                        <p className={`text-xs font-black mt-2 ${iconClass}`}><i className="fa-solid fa-bullseye mr-1.5"></i> Hedef ciro: {formatTL(target)}</p>
                     </div>
                     <span className={`hidden sm:inline-flex px-3 py-1 rounded-full text-white text-xs font-black ${accentClass}`}>İlk 10</span>
                 </div>
@@ -370,12 +371,12 @@
             </div>
         );
 
-        const RankingBoard = ({ oldPerformers, newPerformers, nearWinners, officeStats, isNightMode, onProfileClick }) => (
+        const RankingBoard = ({ oldPerformers, newPerformers, oldTarget, newTarget, nearWinners, officeStats, isNightMode, onProfileClick }) => (
             <div className="max-w-7xl mx-auto animate-fade-in print:hidden">
                 <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
                     <div className="space-y-6">
-                        <LiveRankingList title="Eski Personel Canlı Sıralama" description="Eski personel kendi hedef yüzdesine göre sıralanır" performers={oldPerformers} accentClass="bg-indigo-500" iconClass="text-indigo-500" isNightMode={isNightMode} onProfileClick={onProfileClick} />
-                        <LiveRankingList title="Yeni Personel Canlı Sıralama" description="Yeni personel kendi hedef yüzdesine göre sıralanır" performers={newPerformers} accentClass="bg-amber-500" iconClass="text-amber-500" isNightMode={isNightMode} onProfileClick={onProfileClick} />
+                        <LiveRankingList title="Eski Personel Canlı Sıralama" description="Eski personel kendi hedef yüzdesine göre sıralanır" target={oldTarget} performers={oldPerformers} accentClass="bg-indigo-500" iconClass="text-indigo-500" isNightMode={isNightMode} onProfileClick={onProfileClick} />
+                        <LiveRankingList title="Yeni Personel Canlı Sıralama" description="Yeni personel kendi hedef yüzdesine göre sıralanır" target={newTarget} performers={newPerformers} accentClass="bg-amber-500" iconClass="text-amber-500" isNightMode={isNightMode} onProfileClick={onProfileClick} />
                     </div>
 
                     <div className="space-y-6">
@@ -1687,6 +1688,8 @@
                   <RankingBoard
                     oldPerformers={processedOldData}
                     newPerformers={processedNewData}
+                    oldTarget={targetOld}
+                    newTarget={targetNew}
                     nearWinners={nearWinners}
                     officeStats={officeStats}
                     isNightMode={isNightMode}
