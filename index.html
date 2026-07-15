@@ -337,38 +337,45 @@
             );
         };
 
-        const RankingBoard = ({ topPerformers, nearWinners, officeStats, isNightMode, onProfileClick }) => (
+        const LiveRankingList = ({ title, description, performers, accentClass, iconClass, isNightMode, onProfileClick }) => (
+            <div className={`rounded-[2rem] shadow-2xl border overflow-hidden ${isNightMode ? 'bg-slate-900/85 border-slate-700 text-white' : 'bg-white/90 border-white/70'}`}>
+                <div className="p-5 sm:p-6 border-b border-slate-500/20 flex items-center justify-between gap-3">
+                    <div>
+                        <h2 className="text-lg sm:text-xl font-black uppercase tracking-widest"><i className={`fa-solid fa-ranking-star mr-2 ${iconClass}`}></i> {title}</h2>
+                        <p className={`text-xs font-bold mt-1 ${isNightMode ? 'text-slate-400' : 'text-slate-500'}`}>{description}</p>
+                    </div>
+                    <span className={`hidden sm:inline-flex px-3 py-1 rounded-full text-white text-xs font-black ${accentClass}`}>İlk 10</span>
+                </div>
+                <div className="divide-y divide-slate-500/10">
+                    {performers.length === 0 ? (
+                        <div className="p-10 text-center opacity-50 font-bold">Henüz sıralama verisi yok.</div>
+                    ) : performers.slice(0, 10).map((emp, index) => (
+                        <button key={emp.id} onClick={() => onProfileClick(emp)} className={`w-full text-left p-4 sm:p-5 flex items-center gap-3 transition-colors ${isNightMode ? 'hover:bg-slate-800/70' : 'hover:bg-white'}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0 ${index < 3 ? `${accentClass} text-white shadow-lg` : (isNightMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500')}`}>#{index + 1}</div>
+                            <div className={`w-10 h-10 rounded-full hidden sm:flex items-center justify-center text-white text-xs font-black shrink-0 ${getAvatarColor(emp.name)}`}>{getInitials(emp.name)}</div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <p className={`font-black text-sm truncate ${isNightMode ? 'text-white' : 'text-slate-800'}`}>{emp.name}</p>
+                                    {emp.badges && emp.badges.map((b,i)=><span key={i} title={b.name} className="text-xs">{b.icon}</span>)}
+                                </div>
+                                <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest">{emp.office}</p>
+                            </div>
+                            <div className="w-24 sm:w-40">
+                                <div className="flex justify-between text-[10px] font-black mb-1"><span className="text-emerald-500">% {emp.percentage.toFixed(0)}</span><span className="opacity-50">{formatTL(emp.netRevenue)}</span></div>
+                                <div className={`h-2 rounded-full overflow-hidden ${isNightMode ? 'bg-slate-800' : 'bg-slate-100'}`}><div className={`h-full rounded-full ${accentClass}`} style={{width: `${Math.min(emp.percentage, 100)}%`}}></div></div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+
+        const RankingBoard = ({ oldPerformers, newPerformers, nearWinners, officeStats, isNightMode, onProfileClick }) => (
             <div className="max-w-7xl mx-auto animate-fade-in print:hidden">
                 <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
-                    <div className={`rounded-[2rem] shadow-2xl border overflow-hidden ${isNightMode ? 'bg-slate-900/85 border-slate-700 text-white' : 'bg-white/90 border-white/70'}`}>
-                        <div className="p-5 sm:p-6 border-b border-slate-500/20 flex items-center justify-between gap-3">
-                            <div>
-                                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-widest"><i className="fa-solid fa-ranking-star text-amber-400 mr-2"></i> Canlı Sıralama</h2>
-                                <p className={`text-xs font-bold mt-1 ${isNightMode ? 'text-slate-400' : 'text-slate-500'}`}>Tüm personel başarı yüzdesine göre listelenir</p>
-                            </div>
-                            <span className="hidden sm:inline-flex px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-black">İlk 10</span>
-                        </div>
-                        <div className="divide-y divide-slate-500/10">
-                            {topPerformers.length === 0 ? (
-                                <div className="p-10 text-center opacity-50 font-bold">Henüz sıralama verisi yok.</div>
-                            ) : topPerformers.slice(0, 10).map((emp, index) => (
-                                <button key={emp.id} onClick={() => onProfileClick(emp)} className={`w-full text-left p-4 sm:p-5 flex items-center gap-3 transition-colors ${isNightMode ? 'hover:bg-slate-800/70' : 'hover:bg-white'}`}>
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black shrink-0 ${index < 3 ? 'bg-amber-400 text-white shadow-lg' : (isNightMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500')}`}>#{index + 1}</div>
-                                    <div className={`w-10 h-10 rounded-full hidden sm:flex items-center justify-center text-white text-xs font-black shrink-0 ${getAvatarColor(emp.name)}`}>{getInitials(emp.name)}</div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex flex-wrap items-center gap-1.5">
-                                            <p className={`font-black text-sm truncate ${isNightMode ? 'text-white' : 'text-slate-800'}`}>{emp.name}</p>
-                                            {emp.badges && emp.badges.map((b,i)=><span key={i} title={b.name} className="text-xs">{b.icon}</span>)}
-                                        </div>
-                                        <p className="text-[10px] font-bold opacity-50 uppercase tracking-widest">{emp.office}</p>
-                                    </div>
-                                    <div className="w-24 sm:w-40">
-                                        <div className="flex justify-between text-[10px] font-black mb-1"><span className="text-emerald-500">% {emp.percentage.toFixed(0)}</span><span className="opacity-50">{formatTL(emp.netRevenue)}</span></div>
-                                        <div className={`h-2 rounded-full overflow-hidden ${isNightMode ? 'bg-slate-800' : 'bg-slate-100'}`}><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-emerald-400" style={{width: `${Math.min(emp.percentage, 100)}%`}}></div></div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
+                    <div className="space-y-6">
+                        <LiveRankingList title="Eski Personel Canlı Sıralama" description="Eski personel kendi hedef yüzdesine göre sıralanır" performers={oldPerformers} accentClass="bg-indigo-500" iconClass="text-indigo-500" isNightMode={isNightMode} onProfileClick={onProfileClick} />
+                        <LiveRankingList title="Yeni Personel Canlı Sıralama" description="Yeni personel kendi hedef yüzdesine göre sıralanır" performers={newPerformers} accentClass="bg-amber-500" iconClass="text-amber-500" isNightMode={isNightMode} onProfileClick={onProfileClick} />
                     </div>
 
                     <div className="space-y-6">
@@ -1678,7 +1685,8 @@
                 {/* --- Sıralama Sekmesi --- */}
                 {activeTab === 'leaderboard' && (
                   <RankingBoard
-                    topPerformers={allProcessedData}
+                    oldPerformers={processedOldData}
+                    newPerformers={processedNewData}
                     nearWinners={nearWinners}
                     officeStats={officeStats}
                     isNightMode={isNightMode}
