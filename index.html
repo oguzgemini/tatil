@@ -875,11 +875,14 @@
                   <td>${emp.isWinner ? 'Bilet Aldı' : 'Bekliyor'}</td>
                 </tr>
               `).join('');
-              const buildReportSection = (title, note, rows, sectionClass) => `
+              const buildReportSection = (title, note, rows, sectionClass, targetLabel = '', targetValue = null) => `
                 <section class="report-section ${sectionClass}">
                   <div class="section-heading">
-                    <h2>${escapeExcelCell(title)}</h2>
-                    <p>${escapeExcelCell(note)} | Kayıt: ${rows.length}</p>
+                    <div>
+                      <h2>${escapeExcelCell(title)}</h2>
+                      <p>${escapeExcelCell(note)} | Kayıt: ${rows.length}</p>
+                    </div>
+                    ${targetLabel ? `<div class="section-target"><span>${escapeExcelCell(targetLabel)}</span><strong>${escapeExcelCell(formatTL(targetValue))}</strong></div>` : ''}
                   </div>
                   <table>
                     <thead><tr>${report.headers.map(h => `<th>${escapeExcelCell(h)}</th>`).join('')}</tr></thead>
@@ -910,8 +913,11 @@
                     .summary td { font-weight: 700; background: #e0f2fe; border-color: #7dd3fc; font-size: 11px; }
                     .report-section { margin-top: 18px; --accent: #0f766e; --soft: #f0fdfa; --stripe: #f8fafc; }
                     .report-section + .report-section { break-before: page; page-break-before: always; margin-top: 0; }
-                    .section-heading { padding: 9px 12px; background: var(--accent); border-radius: 7px 7px 0 0; }
+                    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 12px; background: var(--accent); border-radius: 7px 7px 0 0; }
                     .section-heading p { margin-top: 3px; color: #ffffff; opacity: 0.9; }
+                    .section-target { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; padding: 6px 10px; color: #ffffff; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 6px; }
+                    .section-target span { font-size: 10px; font-weight: 700; }
+                    .section-target strong { font-size: 12px; white-space: nowrap; }
                     .report-section th { background: var(--accent); border-color: var(--accent); }
                     .report-section tbody tr:nth-child(even) td { background: var(--stripe); }
                     .report-section .winner-row td { background: #dcfce7; color: #166534; font-weight: 700; }
@@ -926,10 +932,10 @@
                   <p>Oluşturulma: ${escapeExcelCell(report.generatedAt)}</p>
                   <p>Ofis filtresi: ${escapeExcelCell(report.officeText)} | Arama: ${escapeExcelCell(searchTerm || '-')}</p>
                   <table>
-                    <tr class="summary"><td>Katılımcı</td><td>${employees.length}</td><td>Bileti Kapanlar</td><td>${totalWinners}</td><td>Eski Hedef</td><td>${escapeExcelCell(formatTL(targetOld))}</td><td>Yeni Hedef</td><td>${escapeExcelCell(formatTL(targetNew))}</td></tr>
+                    <tr class="summary"><td>Katılımcı</td><td>${employees.length}</td><td>Bileti Kapanlar</td><td>${totalWinners}</td><td>Eski Hedef</td><td>${escapeExcelCell(formatTL(targetOld))}</td></tr>
                   </table>
                   ${buildReportSection('ESKİ PERSONEL', '1 Haziran 2025 tarihi öncesi İpaş giriş tarihi olan satış temsilcileri', report.oldRows, 'old-section')}
-                  ${buildReportSection('YENİ PERSONEL', '1 Haziran 2025 tarihi sonrası İpaş giriş tarihi olan satış temsilcileri', report.newRows, 'new-section')}
+                  ${buildReportSection('YENİ PERSONEL', '1 Haziran 2025 tarihi sonrası İpaş giriş tarihi olan satış temsilcileri', report.newRows, 'new-section', 'Yeni Hedef', targetNew)}
                 </body>
                 </html>
               `;
