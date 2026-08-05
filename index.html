@@ -860,7 +860,7 @@
           const buildReportHtml = () => {
               const report = buildExportContext();
               const buildReportRows = (rows) => rows.map(({ emp, typeLabel, order }) => `
-                <tr>
+                <tr class="${emp.isWinner ? 'winner-row' : ''}">
                   <td>${order}</td>
                   <td>${escapeExcelCell(typeLabel)}</td>
                   <td>${escapeExcelCell(emp.name)}</td>
@@ -875,13 +875,17 @@
                   <td>${emp.isWinner ? 'Bilet Aldı' : 'Bekliyor'}</td>
                 </tr>
               `).join('');
-              const buildReportSection = (title, note, rows) => `
-                <h2>${escapeExcelCell(title)}</h2>
-                <p>${escapeExcelCell(note)} | Kayıt: ${rows.length}</p>
-                <table>
-                  <thead><tr>${report.headers.map(h => `<th>${escapeExcelCell(h)}</th>`).join('')}</tr></thead>
-                  <tbody>${rows.length ? buildReportRows(rows) : `<tr><td colspan="${report.headers.length}">Kayıt bulunmuyor.</td></tr>`}</tbody>
-                </table>
+              const buildReportSection = (title, note, rows, sectionClass) => `
+                <section class="report-section ${sectionClass}">
+                  <div class="section-heading">
+                    <h2>${escapeExcelCell(title)}</h2>
+                    <p>${escapeExcelCell(note)} | Kayıt: ${rows.length}</p>
+                  </div>
+                  <table>
+                    <thead><tr>${report.headers.map(h => `<th>${escapeExcelCell(h)}</th>`).join('')}</tr></thead>
+                    <tbody>${rows.length ? buildReportRows(rows) : `<tr><td colspan="${report.headers.length}">Kayıt bulunmuyor.</td></tr>`}</tbody>
+                  </table>
+                </section>
               `;
               return `
                 <!DOCTYPE html>
@@ -892,15 +896,27 @@
                   <style>
                     @page { size: A4 landscape; margin: 10mm; }
                     * { box-sizing: border-box; }
-                    body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; }
-                    h1 { margin: 0 0 8px; font-size: 22px; }
-                    h2 { margin: 18px 0 8px; font-size: 16px; }
+                    body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    h1 { margin: 0 0 8px; padding: 10px 14px; font-size: 22px; color: #ffffff; background: #0f766e; border-radius: 7px; }
+                    h2 { margin: 0; font-size: 16px; color: #ffffff; }
                     p { margin: 4px 0; font-size: 11px; color: #475569; }
                     table { border-collapse: collapse; width: 100%; page-break-inside: auto; }
+                    thead { display: table-header-group; break-inside: avoid-page; page-break-inside: avoid; }
+                    thead tr, thead th { break-inside: avoid-page; page-break-inside: avoid; }
                     tr { page-break-inside: avoid; page-break-after: auto; }
                     th, td { border: 1px solid #cbd5e1; padding: 6px; font-size: 10px; vertical-align: top; }
-                    th { background: #0f766e; color: #ffffff; font-weight: 700; }
-                    .summary td { font-weight: 700; background: #f1f5f9; font-size: 11px; }
+                    th { color: #ffffff; font-weight: 700; }
+                    .summary { margin-top: 10px; }
+                    .summary td { font-weight: 700; background: #e0f2fe; border-color: #7dd3fc; font-size: 11px; }
+                    .report-section { margin-top: 18px; --accent: #0f766e; --soft: #f0fdfa; --stripe: #f8fafc; }
+                    .report-section + .report-section { break-before: page; page-break-before: always; margin-top: 0; }
+                    .section-heading { padding: 9px 12px; background: var(--accent); border-radius: 7px 7px 0 0; }
+                    .section-heading p { margin-top: 3px; color: #ffffff; opacity: 0.9; }
+                    .report-section th { background: var(--accent); border-color: var(--accent); }
+                    .report-section tbody tr:nth-child(even) td { background: var(--stripe); }
+                    .report-section .winner-row td { background: #dcfce7; color: #166534; font-weight: 700; }
+                    .old-section { --accent: #4338ca; --stripe: #eef2ff; }
+                    .new-section { --accent: #c2410c; --stripe: #fff7ed; }
                     td:nth-child(n+6) { text-align: right; white-space: nowrap; }
                     td:last-child { text-align: left; }
                   </style>
@@ -912,8 +928,8 @@
                   <table>
                     <tr class="summary"><td>Katılımcı</td><td>${employees.length}</td><td>Bileti Kapanlar</td><td>${totalWinners}</td><td>Eski Hedef</td><td>${escapeExcelCell(formatTL(targetOld))}</td><td>Yeni Hedef</td><td>${escapeExcelCell(formatTL(targetNew))}</td></tr>
                   </table>
-                  ${buildReportSection('ESKİ PERSONEL', '1 Haziran 2025 tarihi öncesi İpaş giriş tarihi olan satış temsilcileri', report.oldRows)}
-                  ${buildReportSection('YENİ PERSONEL', '1 Haziran 2025 tarihi sonrası İpaş giriş tarihi olan satış temsilcileri', report.newRows)}
+                  ${buildReportSection('ESKİ PERSONEL', '1 Haziran 2025 tarihi öncesi İpaş giriş tarihi olan satış temsilcileri', report.oldRows, 'old-section')}
+                  ${buildReportSection('YENİ PERSONEL', '1 Haziran 2025 tarihi sonrası İpaş giriş tarihi olan satış temsilcileri', report.newRows, 'new-section')}
                 </body>
                 </html>
               `;
@@ -960,13 +976,14 @@
               `;
           };
 
-          const buildExcelCell = (value, type = 'String', formula = '') => {
+          const buildExcelCell = (value, type = 'String', formula = '', styleId = '') => {
               const formulaAttr = formula ? ` ss:Formula="${escapeExcelCell(formula)}"` : '';
+              const styleAttr = styleId ? ` ss:StyleID="${escapeExcelCell(styleId)}"` : '';
               if (type === 'Number') {
                   const numberValue = Number(value) || 0;
-                  return `<Cell${formulaAttr}><Data ss:Type="Number">${numberValue}</Data></Cell>`;
+                  return `<Cell${formulaAttr}${styleAttr}><Data ss:Type="Number">${numberValue}</Data></Cell>`;
               }
-              return `<Cell${formulaAttr}><Data ss:Type="String">${escapeExcelCell(value)}</Data></Cell>`;
+              return `<Cell${formulaAttr}${styleAttr}><Data ss:Type="String">${escapeExcelCell(value)}</Data></Cell>`;
           };
 
           const buildFormulaExcelRows = (rows, firstDataRow) => {
@@ -985,11 +1002,11 @@
                       ${buildExcelCell(emp.name)}
                       ${buildExcelCell(emp.office)}
                       ${buildExcelCell(formatDate(emp.entryDate))}
-                      ${months.map(m => buildExcelCell(emp.sales?.[m.id] || 0, 'Number')).join('')}
-                      ${months.map(m => buildExcelCell(emp.monthlyReturns?.[m.id] || 0, 'Number')).join('')}
-                      ${buildExcelCell(emp.netRevenue, 'Number', netFormula)}
-                      ${buildExcelCell(emp.target, 'Number')}
-                      ${buildExcelCell(emp.remaining, 'Number', remainingFormula)}
+                      ${months.map(m => buildExcelCell(emp.sales?.[m.id] || 0, 'Number', '', 'Money')).join('')}
+                      ${months.map(m => buildExcelCell(emp.monthlyReturns?.[m.id] || 0, 'Number', '', 'Money')).join('')}
+                      ${buildExcelCell(emp.netRevenue, 'Number', netFormula, 'Money')}
+                      ${buildExcelCell(emp.target, 'Number', '', 'Money')}
+                      ${buildExcelCell(emp.remaining, 'Number', remainingFormula, 'Money')}
                       ${buildExcelCell(emp.percentage, 'Number', percentageFormula)}
                       ${buildExcelCell(emp.isWinner ? 'Bilet Aldı' : 'Bekliyor')}
                     </Row>
@@ -1047,13 +1064,15 @@
                     <Style ss:ID="Title"><Font ss:Bold="1" ss:Size="16" /><Interior ss:Color="#E0F2FE" ss:Pattern="Solid" /></Style>
                     <Style ss:ID="Header"><Font ss:Bold="1" ss:Color="#FFFFFF" /><Interior ss:Color="#0F766E" ss:Pattern="Solid" /></Style>
                     <Style ss:ID="Summary"><Font ss:Bold="1" /><Interior ss:Color="#F1F5F9" ss:Pattern="Solid" /></Style>
+                    <Style ss:ID="Money"><NumberFormat ss:Format="#,##0" /></Style>
+                    <Style ss:ID="SummaryMoney" ss:Parent="Summary"><NumberFormat ss:Format="#,##0" /></Style>
                   </Styles>
                   <Worksheet ss:Name="Ana Sayfa">
                     <Table>
                       <Row><Cell ss:MergeAcross="${Math.max(excelReport.headers.length - 1, 1)}" ss:StyleID="Title"><Data ss:Type="String">Sahanın Kazananları - Ana Sayfa</Data></Cell></Row>
                       <Row><Cell><Data ss:Type="String">Oluşturulma</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(excelReport.generatedAt)}</Data></Cell></Row>
                       <Row><Cell><Data ss:Type="String">Ofis filtresi</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(excelReport.officeText)}</Data></Cell><Cell><Data ss:Type="String">Arama</Data></Cell><Cell><Data ss:Type="String">${escapeExcelCell(searchTerm || '-')}</Data></Cell></Row>
-                      <Row ss:StyleID="Summary"><Cell><Data ss:Type="String">Katılımcı</Data></Cell><Cell><Data ss:Type="Number">${employees.length}</Data></Cell><Cell><Data ss:Type="String">Bileti Kapanlar</Data></Cell><Cell><Data ss:Type="Number">${totalWinners}</Data></Cell><Cell><Data ss:Type="String">Eski Hedef</Data></Cell><Cell><Data ss:Type="Number">${targetOld}</Data></Cell><Cell><Data ss:Type="String">Yeni Hedef</Data></Cell><Cell><Data ss:Type="Number">${targetNew}</Data></Cell></Row>
+                      <Row ss:StyleID="Summary"><Cell><Data ss:Type="String">Katılımcı</Data></Cell><Cell><Data ss:Type="Number">${employees.length}</Data></Cell><Cell><Data ss:Type="String">Bileti Kapanlar</Data></Cell><Cell><Data ss:Type="Number">${totalWinners}</Data></Cell><Cell><Data ss:Type="String">Eski Hedef</Data></Cell><Cell ss:StyleID="SummaryMoney"><Data ss:Type="Number">${targetOld}</Data></Cell><Cell><Data ss:Type="String">Yeni Hedef</Data></Cell><Cell ss:StyleID="SummaryMoney"><Data ss:Type="Number">${targetNew}</Data></Cell></Row>
                       ${buildExcelSection('ESKİ PERSONEL', '1 Haziran 2025 tarihi öncesi İpaş giriş tarihi olan satış temsilcileri', excelReport.oldRows)}
                       ${buildExcelSection('YENİ PERSONEL', '1 Haziran 2025 tarihi sonrası İpaş giriş tarihi olan satış temsilcileri', excelReport.newRows)}
                     </Table>
